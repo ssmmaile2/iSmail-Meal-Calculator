@@ -13,7 +13,7 @@ export async function GET(
 
   const { data: meal, error: mealError } = await supabase
     .from("meals")
-    .select("id, title, created_at")
+    .select("id, title, created_at, updated_at")
     .eq("id", mealId)
     .single();
 
@@ -51,4 +51,33 @@ export async function GET(
     meal,
     items: items ?? [],
   });
+}
+
+export async function PATCH(
+  req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id: mealId } = await context.params;
+  const body = await req.json();
+  const { title } = body;
+
+  if (!mealId) {
+    return NextResponse.json({ error: "mealId is missing" }, { status: 400 });
+  }
+
+  const { data, error } = await supabase
+    .from("meals")
+    .update({
+      title: (title || "وجبة جديدة").trim(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", mealId)
+    .select("id, title, created_at, updated_at")
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(data);
 }
