@@ -22,39 +22,56 @@ type MealItem = {
   foods: Food | null;
 };
 
+type SavedMeal = {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export default function Page() {
   const [mealId, setMealId] = useState<string | null>(null);
+  const [mealTitle, setMealTitle] = useState("وجبة جديدة");
+  const [savedMeals, setSavedMeals] = useState<SavedMeal[]>([]);
   const [items, setItems] = useState<MealItem[]>([]);
   const [query, setQuery] = useState("");
   const [qty, setQty] = useState<number | "">(100);
   const [suggestions, setSuggestions] = useState<Food[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [savingTitle, setSavingTitle] = useState(false);
 
   useEffect(() => {
-    async function createMeal() {
+    async function init() {
+      await loadSavedMeals();
+
       try {
-        const res = await fetch("/api/meals", { method: "POST" });
+        const res = await fetch("/api/meals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: "وجبة جديدة" }),
+        });
+
         const meal = await res.json();
 
         if (!res.ok) {
-          console.error("Create meal failed:", meal);
           alert(meal.error || "فشل في إنشاء الوجبة");
-          setLoading(false);
           return;
         }
 
         setMealId(meal.id);
+        setMealTitle(meal.title);
         await refreshMeal(meal.id);
+        await loadSavedMeals();
       } catch (error) {
-        console.error("createMeal error:", error);
+        console.error(error);
         alert("حدث خطأ أثناء إنشاء الوجبة");
       } finally {
         setLoading(false);
       }
     }
 
-    createMeal();
+    init();
   }, []);
 
   useEffect(() => {
@@ -82,6 +99,22 @@ export default function Page() {
     return () => clearTimeout(timer);
   }, [query]);
 
+  async function loadSavedMeals() {
+    try {
+      const res = await fetch("/api/meals");
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("Load meals failed:", data);
+        return;
+      }
+
+      setSavedMeals(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("loadSavedMeals error:", error);
+    }
+  }
+
   async function refreshMeal(id: string) {
     try {
       const res = await fetch(`/api/meals/${id}`);
@@ -93,10 +126,70 @@ export default function Page() {
         return;
       }
 
+      setMealId(data.meal.id);
+      setMealTitle(data.meal.title || "وجبة جديدة");
       setItems(Array.isArray(data.items) ? data.items : []);
     } catch (error) {
       console.error("refreshMeal error:", error);
       alert("حدث خطأ أثناء تحميل الوجبة");
+    }
+  }
+
+  async function createNewMeal() {
+    try {
+      const res = await fetch("/api/meals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "وجبة جديدة" }),
+      });
+
+      const meal = await res.json();
+
+      if (!res.ok) {
+        alert(meal.error || "فشل في إنشاء وجبة جديدة");
+        return;
+      }
+
+      setMealId(meal.id);
+      setMealTitle(meal.title);
+      setItems([]);
+      setQuery("");
+      setSuggestions([]);
+      setQty(100);
+      await loadSavedMeals();
+    } catch (error) {
+      console.error(error);
+      alert("حدث خطأ أثناء إنشاء وجبة جديدة");
+    }
+  }
+
+  async function saveMealTitle() {
+    if (!mealId) return;
+
+    setSavingTitle(true);
+
+    try {
+      const res = await fetch(`/api/meals/${mealId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: mealTitle }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "فشل في حفظ اسم الوجبة");
+        return;
+      }
+
+      setMealTitle(data.title);
+      await loadSavedMeals();
+      alert("تم حفظ الوجبة");
+    } catch (error) {
+      console.error(error);
+      alert("حدث خطأ أثناء الحفظ");
+    } finally {
+      setSavingTitle(false);
     }
   }
 
@@ -171,6 +264,7 @@ export default function Page() {
       setQuery("");
       setSuggestions([]);
       setQty(100);
+      await loadSavedMeals();
     } catch (error) {
       console.error("addItem error:", error);
       alert("حدث خطأ أثناء الإضافة");
@@ -204,6 +298,7 @@ export default function Page() {
           item.id === itemId ? { ...item, qty_g: newQty } : item
         )
       );
+      await loadSavedMeals();
     } catch (error) {
       console.error("updateQty error:", error);
       alert("حدث خطأ أثناء تعديل الكمية");
@@ -227,6 +322,7 @@ export default function Page() {
       }
 
       setItems((prev) => prev.filter((item) => item.id !== itemId));
+      await loadSavedMeals();
     } catch (error) {
       console.error("deleteItem error:", error);
       alert("حدث خطأ أثناء حذف العنصر");
@@ -234,183 +330,223 @@ export default function Page() {
   }
 
   return (
-    <main style={{ maxWidth: 1200, margin: "0 auto", padding: 16 }}>
-      <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>
+    <main style={{ maxWidth: 1400, margin: "0 auto", padding: 16 }}>
+      <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 16 }}>
         meal calculator
       </h1>
-
-      <p style={{ marginBottom: 20, color: "#555" }}>
-        اكتب اسم المكوّن أو أحد أسمائه البديلة، ثم أدخل الكمية بالغرام.
-      </p>
 
       <div
         style={{
           display: "grid",
-          gap: 12,
-          marginBottom: 20,
-          padding: 16,
-          border: "1px solid #e5e5e5",
-          borderRadius: 12,
-          background: "#fafafa",
+          gridTemplateColumns: "280px 1fr",
+          gap: 16,
         }}
       >
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="مثال: اجاص / إجاص / سردين / الشرن / طاجين"
-          style={inputStyle}
-        />
+        <aside
+          style={{
+            border: "1px solid #e5e5e5",
+            borderRadius: 12,
+            padding: 12,
+            background: "#fafafa",
+            height: "fit-content",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+            <strong>الوجبات المحفوظة</strong>
+            <button onClick={createNewMeal} style={buttonStyle}>
+              وجبة جديدة
+            </button>
+          </div>
 
-        <input
-          type="number"
-          value={qty}
-          onChange={(e) =>
-            setQty(e.target.value === "" ? "" : Number(e.target.value))
-          }
-          placeholder="الكمية بالغرام"
-          style={inputStyle}
-        />
-
-        {suggestions.length > 0 && (
-          <div
-            style={{
-              border: "1px solid #ddd",
-              borderRadius: 10,
-              overflow: "hidden",
-              background: "white",
-            }}
-          >
-            {suggestions.map((food) => (
+          <div style={{ display: "grid", gap: 8 }}>
+            {savedMeals.map((meal) => (
               <button
-                key={food.id}
-                onClick={() => addItem(food)}
-                disabled={adding}
+                key={meal.id}
+                onClick={() => refreshMeal(meal.id)}
                 style={{
-                  width: "100%",
-                  padding: 12,
-                  border: "none",
-                  borderBottom: "1px solid #eee",
                   textAlign: "right",
-                  cursor: "pointer",
+                  border: meal.id === mealId ? "2px solid #999" : "1px solid #ddd",
+                  borderRadius: 10,
+                  padding: 10,
                   background: "white",
+                  cursor: "pointer",
                 }}
               >
-                <div style={{ fontWeight: 600 }}>{food.name_ar}</div>
+                <div style={{ fontWeight: 600 }}>{meal.title}</div>
                 <div style={{ fontSize: 12, color: "#666" }}>
-                  {food.notes || ""}
-                  {food.default_qty_g ? ` — وزن افتراضي: ${food.default_qty_g}غ` : ""}
+                  آخر تعديل: {new Date(meal.updated_at).toLocaleString()}
                 </div>
               </button>
             ))}
           </div>
-        )}
-      </div>
+        </aside>
 
-      {loading ? (
-        <p>جاري التحميل...</p>
-      ) : (
-        <div
-          style={{
-            overflowX: "auto",
-            border: "1px solid #e5e5e5",
-            borderRadius: 12,
-          }}
-        >
-          <table
+        <section>
+          <div
             style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              minWidth: 950,
+              display: "grid",
+              gap: 12,
+              marginBottom: 20,
+              padding: 16,
+              border: "1px solid #e5e5e5",
+              borderRadius: 12,
+              background: "#fafafa",
             }}
           >
-            <thead>
-              <tr style={{ background: "#f7f7f7" }}>
-                <th style={thStyle}>المكوّن</th>
-                <th style={thStyle}>الكمية (غ)</th>
-                <th style={thStyle}>السعرات</th>
-                <th style={thStyle}>البروتين</th>
-                <th style={thStyle}>الدهون</th>
-                <th style={thStyle}>الألياف</th>
-                <th style={thStyle}>الكارب الصافي</th>
-                <th style={thStyle}>حذف</th>
-              </tr>
-            </thead>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <input
+                value={mealTitle}
+                onChange={(e) => setMealTitle(e.target.value)}
+                placeholder="اسم الوجبة"
+                style={{ ...inputStyle, flex: 1, minWidth: 220 }}
+              />
+              <button onClick={saveMealTitle} disabled={savingTitle} style={buttonStyle}>
+                حفظ الوجبة
+              </button>
+            </div>
 
-            <tbody>
-              {items.map((item) => {
-                if (!item.foods) {
-                  return (
-                    <tr key={item.id}>
-                      <td style={tdStyle}>عنصر غير موجود</td>
-                      <td style={tdStyle}>{item.qty_g}</td>
-                      <td style={tdStyle}>-</td>
-                      <td style={tdStyle}>-</td>
-                      <td style={tdStyle}>-</td>
-                      <td style={tdStyle}>-</td>
-                      <td style={tdStyle}>-</td>
-                      <td style={tdStyle}>
-                        <button onClick={() => deleteItem(item.id)} style={deleteButtonStyle}>
-                          حذف
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                }
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="ابحث عن مكوّن..."
+              style={inputStyle}
+            />
 
-                const row = calcRow(item.foods, item.qty_g);
+            <input
+              type="number"
+              value={qty}
+              onChange={(e) =>
+                setQty(e.target.value === "" ? "" : Number(e.target.value))
+              }
+              placeholder="الكمية بالغرام"
+              style={inputStyle}
+            />
 
-                return (
-                  <tr key={item.id}>
-                    <td style={tdStyle}>
-                      <div style={{ fontWeight: 600 }}>{item.foods.name_ar}</div>
-                      <div style={{ fontSize: 12, color: "#666" }}>
-                        {item.foods.notes || ""}
-                      </div>
-                    </td>
+            {suggestions.length > 0 && (
+              <div
+                style={{
+                  border: "1px solid #ddd",
+                  borderRadius: 10,
+                  overflow: "hidden",
+                  background: "white",
+                }}
+              >
+                {suggestions.map((food) => (
+                  <button
+                    key={food.id}
+                    onClick={() => addItem(food)}
+                    disabled={adding}
+                    style={{
+                      width: "100%",
+                      padding: 12,
+                      border: "none",
+                      borderBottom: "1px solid #eee",
+                      textAlign: "right",
+                      cursor: "pointer",
+                      background: "white",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{food.name_ar}</div>
+                    <div style={{ fontSize: 12, color: "#666" }}>
+                      {food.notes || ""}
+                      {food.default_qty_g ? ` — وزن افتراضي: ${food.default_qty_g}غ` : ""}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-                    <td style={tdStyle}>
-                      <input
-                        type="number"
-                        value={item.qty_g}
-                        onChange={(e) => updateQty(item.id, Number(e.target.value))}
-                        style={{
-                          width: 90,
-                          padding: 8,
-                          border: "1px solid #ddd",
-                          borderRadius: 8,
-                        }}
-                      />
-                    </td>
-
-                    <td style={tdStyle}>{row.kcal.toFixed(1)}</td>
-                    <td style={tdStyle}>{row.protein.toFixed(1)}</td>
-                    <td style={tdStyle}>{row.fat.toFixed(1)}</td>
-                    <td style={tdStyle}>{row.fiber.toFixed(1)}</td>
-                    <td style={tdStyle}>{row.netCarb.toFixed(1)}</td>
-
-                    <td style={tdStyle}>
-                      <button onClick={() => deleteItem(item.id)} style={deleteButtonStyle}>
-                        حذف
-                      </button>
-                    </td>
+          {loading ? (
+            <p>جاري التحميل...</p>
+          ) : (
+            <div
+              style={{
+                overflowX: "auto",
+                border: "1px solid #e5e5e5",
+                borderRadius: 12,
+              }}
+            >
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  minWidth: 950,
+                }}
+              >
+                <thead>
+                  <tr style={{ background: "#f7f7f7" }}>
+                    <th style={thStyle}>المكوّن</th>
+                    <th style={thStyle}>الكمية (غ)</th>
+                    <th style={thStyle}>السعرات</th>
+                    <th style={thStyle}>البروتين</th>
+                    <th style={thStyle}>الدهون</th>
+                    <th style={thStyle}>الألياف</th>
+                    <th style={thStyle}>الكارب الصافي</th>
+                    <th style={thStyle}>حذف</th>
                   </tr>
-                );
-              })}
+                </thead>
 
-              <tr style={{ background: "#fafafa", fontWeight: 700 }}>
-                <td style={tdStyle}>المجموع</td>
-                <td style={tdStyle}></td>
-                <td style={tdStyle}>{totals.kcal.toFixed(1)}</td>
-                <td style={tdStyle}>{totals.protein.toFixed(1)}</td>
-                <td style={tdStyle}>{totals.fat.toFixed(1)}</td>
-                <td style={tdStyle}>{totals.fiber.toFixed(1)}</td>
-                <td style={tdStyle}>{totals.netCarb.toFixed(1)}</td>
-                <td style={tdStyle}></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      )}
+                <tbody>
+                  {items.map((item) => {
+                    if (!item.foods) return null;
+
+                    const row = calcRow(item.foods, item.qty_g);
+
+                    return (
+                      <tr key={item.id}>
+                        <td style={tdStyle}>
+                          <div style={{ fontWeight: 600 }}>{item.foods.name_ar}</div>
+                          <div style={{ fontSize: 12, color: "#666" }}>
+                            {item.foods.notes || ""}
+                          </div>
+                        </td>
+
+                        <td style={tdStyle}>
+                          <input
+                            type="number"
+                            value={item.qty_g}
+                            onChange={(e) => updateQty(item.id, Number(e.target.value))}
+                            style={{
+                              width: 90,
+                              padding: 8,
+                              border: "1px solid #ddd",
+                              borderRadius: 8,
+                            }}
+                          />
+                        </td>
+
+                        <td style={tdStyle}>{row.kcal.toFixed(1)}</td>
+                        <td style={tdStyle}>{row.protein.toFixed(1)}</td>
+                        <td style={tdStyle}>{row.fat.toFixed(1)}</td>
+                        <td style={tdStyle}>{row.fiber.toFixed(1)}</td>
+                        <td style={tdStyle}>{row.netCarb.toFixed(1)}</td>
+
+                        <td style={tdStyle}>
+                          <button onClick={() => deleteItem(item.id)} style={buttonStyle}>
+                            حذف
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  <tr style={{ background: "#fafafa", fontWeight: 700 }}>
+                    <td style={tdStyle}>المجموع</td>
+                    <td style={tdStyle}></td>
+                    <td style={tdStyle}>{totals.kcal.toFixed(1)}</td>
+                    <td style={tdStyle}>{totals.protein.toFixed(1)}</td>
+                    <td style={tdStyle}>{totals.fat.toFixed(1)}</td>
+                    <td style={tdStyle}>{totals.fiber.toFixed(1)}</td>
+                    <td style={tdStyle}>{totals.netCarb.toFixed(1)}</td>
+                    <td style={tdStyle}></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
     </main>
   );
 }
@@ -436,7 +572,7 @@ const tdStyle: React.CSSProperties = {
   fontSize: 14,
 };
 
-const deleteButtonStyle: React.CSSProperties = {
+const buttonStyle: React.CSSProperties = {
   padding: "8px 12px",
   borderRadius: 8,
   border: "1px solid #ddd",
