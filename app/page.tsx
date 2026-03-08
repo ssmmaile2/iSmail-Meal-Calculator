@@ -392,7 +392,6 @@ export default function Page() {
 
           <div style={{ display: "grid", gap: 8 }}>
             {savedMeals.map((meal) => (
-            {savedMeals.map((meal) => (
               <div
                 key={meal.id}
                 style={{
