@@ -60,7 +60,7 @@ export default function Page() {
         }
 
         setMealId(meal.id);
-        setMealTitle(meal.title);
+        setMealTitle(meal.title || "وجبة جديدة");
         await refreshMeal(meal.id);
         await loadSavedMeals();
       } catch (error) {
@@ -151,7 +151,7 @@ export default function Page() {
       }
 
       setMealId(meal.id);
-      setMealTitle(meal.title);
+      setMealTitle(meal.title || "وجبة جديدة");
       setItems([]);
       setQuery("");
       setSuggestions([]);
@@ -163,28 +163,26 @@ export default function Page() {
     }
   }
 
-
-
   async function deleteMeal(targetMealId: string) {
     const confirmed = window.confirm("هل تريد حذف هذه الوجبة نهائيًا؟");
     if (!confirmed) return;
-  
+
     try {
       const res = await fetch(`/api/meals/${targetMealId}`, {
         method: "DELETE",
       });
-  
+
       const data = await res.json();
-  
+
       if (!res.ok) {
         alert(data.error || "فشل في حذف الوجبة");
         return;
       }
-  
+
       const wasCurrentMeal = mealId === targetMealId;
-  
+
       await loadSavedMeals();
-  
+
       if (wasCurrentMeal) {
         await createNewMeal();
       } else {
@@ -195,6 +193,7 @@ export default function Page() {
       alert("حدث خطأ أثناء حذف الوجبة");
     }
   }
+
   async function saveMealTitle() {
     if (!mealId) return;
 
@@ -214,7 +213,7 @@ export default function Page() {
         return;
       }
 
-      setMealTitle(data.title);
+      setMealTitle(data.title || "وجبة جديدة");
       await loadSavedMeals();
       alert("تم حفظ الوجبة");
     } catch (error) {
@@ -330,6 +329,7 @@ export default function Page() {
           item.id === itemId ? { ...item, qty_g: newQty } : item
         )
       );
+
       await loadSavedMeals();
     } catch (error) {
       console.error("updateQty error:", error);
@@ -418,7 +418,7 @@ export default function Page() {
                     آخر تعديل: {new Date(meal.updated_at).toLocaleString()}
                   </div>
                 </button>
-            
+
                 <button
                   onClick={() => deleteMeal(meal.id)}
                   style={{
@@ -429,24 +429,6 @@ export default function Page() {
                   حذف الوجبة
                 </button>
               </div>
-            ))}
-              <button
-                key={meal.id}
-                onClick={() => refreshMeal(meal.id)}
-                style={{
-                  textAlign: "right",
-                  border: meal.id === mealId ? "2px solid #999" : "1px solid #ddd",
-                  borderRadius: 10,
-                  padding: 10,
-                  background: "white",
-                  cursor: "pointer",
-                }}
-              >
-                <div style={{ fontWeight: 600 }}>{meal.title}</div>
-                <div style={{ fontSize: 12, color: "#666" }}>
-                  آخر تعديل: {new Date(meal.updated_at).toLocaleString()}
-                </div>
-              </button>
             ))}
           </div>
         </aside>
