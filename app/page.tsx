@@ -163,6 +163,38 @@ export default function Page() {
     }
   }
 
+
+
+  async function deleteMeal(targetMealId: string) {
+    const confirmed = window.confirm("هل تريد حذف هذه الوجبة نهائيًا؟");
+    if (!confirmed) return;
+  
+    try {
+      const res = await fetch(`/api/meals/${targetMealId}`, {
+        method: "DELETE",
+      });
+  
+      const data = await res.json();
+  
+      if (!res.ok) {
+        alert(data.error || "فشل في حذف الوجبة");
+        return;
+      }
+  
+      const wasCurrentMeal = mealId === targetMealId;
+  
+      await loadSavedMeals();
+  
+      if (wasCurrentMeal) {
+        await createNewMeal();
+      } else {
+        setSavedMeals((prev) => prev.filter((meal) => meal.id !== targetMealId));
+      }
+    } catch (error) {
+      console.error(error);
+      alert("حدث خطأ أثناء حذف الوجبة");
+    }
+  }
   async function saveMealTitle() {
     if (!mealId) return;
 
