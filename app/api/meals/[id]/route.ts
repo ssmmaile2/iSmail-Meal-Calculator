@@ -81,3 +81,25 @@ export async function PATCH(
 
   return NextResponse.json(data);
 }
+
+export async function DELETE(
+  _req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id: mealId } = await context.params;
+
+  if (!mealId) {
+    return NextResponse.json({ error: "mealId is missing" }, { status: 400 });
+  }
+
+  const { error } = await supabase
+    .from("meals")
+    .delete()
+    .eq("id", mealId);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
+}
