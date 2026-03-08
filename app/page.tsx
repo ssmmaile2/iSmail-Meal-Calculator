@@ -392,6 +392,45 @@ export default function Page() {
 
           <div style={{ display: "grid", gap: 8 }}>
             {savedMeals.map((meal) => (
+            {savedMeals.map((meal) => (
+              <div
+                key={meal.id}
+                style={{
+                  border: meal.id === mealId ? "2px solid #999" : "1px solid #ddd",
+                  borderRadius: 10,
+                  padding: 10,
+                  background: "white",
+                }}
+              >
+                <button
+                  onClick={() => refreshMeal(meal.id)}
+                  style={{
+                    width: "100%",
+                    textAlign: "right",
+                    border: "none",
+                    background: "transparent",
+                    cursor: "pointer",
+                    padding: 0,
+                    marginBottom: 8,
+                  }}
+                >
+                  <div style={{ fontWeight: 600 }}>{meal.title}</div>
+                  <div style={{ fontSize: 12, color: "#666" }}>
+                    آخر تعديل: {new Date(meal.updated_at).toLocaleString()}
+                  </div>
+                </button>
+            
+                <button
+                  onClick={() => deleteMeal(meal.id)}
+                  style={{
+                    ...buttonStyle,
+                    width: "100%",
+                  }}
+                >
+                  حذف الوجبة
+                </button>
+              </div>
+            ))}
               <button
                 key={meal.id}
                 onClick={() => refreshMeal(meal.id)}
