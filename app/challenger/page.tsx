@@ -76,6 +76,16 @@ type MealRiskAnalysis = {
   messages: string[];
 };
 
+const NUTS_CONFLICT_NAMES = [
+  "لوز",
+  "جوز",
+  "فول سوداني",
+  "كاجو",
+  "فستق",
+  "بندق",
+  "جوز البرازيل",
+];
+
 export default function ChallengerPage() {
   const [mealId, setMealId] = useState<string | null>(null);
   const [items, setItems] = useState<MealItem[]>([]);
@@ -120,7 +130,6 @@ export default function ChallengerPage() {
 
         if (!res.ok) {
           console.error("Rules API failed:", data);
-          alert(data.error || "فشل في تحميل قواعد المتحدي");
           return;
         }
 
@@ -128,8 +137,6 @@ export default function ChallengerPage() {
         setGroups(Array.isArray(data.groups) ? data.groups : []);
         setMemberships(Array.isArray(data.memberships) ? data.memberships : []);
         setFoodNames(Array.isArray(data.foods) ? data.foods : []);
-
-        console.log("Loaded rules:", data.rules);
       } catch (error) {
         console.error("loadRules error:", error);
       }
@@ -175,7 +182,6 @@ export default function ChallengerPage() {
         return;
       }
 
-      console.log("Loaded items:", data.items);
       setItems(Array.isArray(data.items) ? data.items : []);
     } catch (error) {
       console.error("refreshMeal error:", error);
@@ -312,6 +318,7 @@ export default function ChallengerPage() {
       if (!result[itemId].includes(message)) result[itemId].push(message);
     }
 
+    // 1) تحقق فردي: الحد لكل وجبة + المحظور
     for (const item of itemsWithFood) {
       const food = item.foods;
 
@@ -328,7 +335,29 @@ export default function ChallengerPage() {
           `تم تجاوز الحد المسموح لكل وجبة: ${food.renal_max_per_meal_g}غ`
         );
       }
+    }
 
+    // 2) Fallback مباشر للمكسرات المتنافسة
+    const nutItems = itemsWithFood.filter((item) =>
+      NUTS_CONFLICT_NAMES.includes(item.foods.name_ar)
+    );
+
+    if (nutItems.length > 1) {
+      for (const item of nutItems) {
+        const others = nutItems
+          .filter((x) => x.id !== item.id)
+          .map((x) => x.foods.name_ar);
+
+        addViolation(
+          item.id,
+          `لا ينبغي جمع هذا العنصر مع: ${others.join("، ")}`
+        );
+      }
+    }
+
+    // 3) منطق القواعد العامة من قاعدة البيانات
+    for (const item of itemsWithFood) {
+      const food = item.foods;
       const ownGroupIds = groupIdsByFood[food.id] || [];
       const otherItems = itemsWithFood.filter((x) => x.id !== item.id);
 
