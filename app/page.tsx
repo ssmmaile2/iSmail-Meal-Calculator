@@ -27,6 +27,7 @@ type SavedMeal = {
   title: string;
   created_at: string;
   updated_at: string;
+  items?: MealItem[];
 };
 
 export default function Page() {
@@ -101,7 +102,7 @@ export default function Page() {
 
   async function loadSavedMeals() {
     try {
-      const res = await fetch("/api/meals");
+      const res = await fetch("/api/meals?with_items=true");
       const data = await res.json();
 
       if (!res.ok) {
@@ -236,6 +237,27 @@ export default function Page() {
     return { kcal, protein, fat, fiber, netCarb };
   }
 
+  function calcMealTotals(items: MealItem[] = []) {
+    return items.reduce(
+      (acc, item) => {
+        if (!item.foods) return acc;
+
+        const factor = item.qty_g / 100;
+
+        acc.kcal += item.foods.kcal_100 * factor;
+        acc.protein += item.foods.protein_100 * factor;
+        acc.fat += item.foods.fat_100 * factor;
+        acc.fiber += item.foods.fiber_100 * factor;
+
+        const carbs = item.foods.carbs_total_100 * factor;
+        acc.netCarb += carbs - item.foods.fiber_100 * factor;
+
+        return acc;
+      },
+      { kcal: 0, protein: 0, fat: 0, fiber: 0, netCarb: 0 }
+    );
+  }
+
   const totals = useMemo(() => {
     return items.reduce(
       (acc, item) => {
@@ -260,8 +282,8 @@ export default function Page() {
       food.default_qty_g && Number(food.default_qty_g) > 0
         ? Number(food.default_qty_g)
         : qty === "" || Number(qty) <= 0
-        ? 100
-        : Number(qty);
+          ? 100
+          : Number(qty);
 
     setAdding(true);
 
@@ -383,29 +405,40 @@ export default function Page() {
           </div>
 
           <div className="saved-meals-list">
-            {savedMeals.map((meal) => (
-              <div
-                key={meal.id}
-                className={`saved-meal-card ${meal.id === mealId ? "active" : ""}`}
-              >
-                <button
-                  onClick={() => refreshMeal(meal.id)}
-                  className="saved-meal-open-btn"
-                >
-                  <div className="saved-meal-title">{meal.title}</div>
-                  <div className="saved-meal-date">
-                    آخر تعديل: {new Date(meal.updated_at).toLocaleString()}
-                  </div>
-                </button>
+            {savedMeals.map((meal) => {
+              const mealTotals = calcMealTotals(meal.items || []);
 
-                <button
-                  onClick={() => deleteMeal(meal.id)}
-                  className="danger-btn"
+              return (
+                <div
+                  key={meal.id}
+                  className={`saved-meal-card ${meal.id === mealId ? "active" : ""}`}
                 >
-                  حذف الوجبة
-                </button>
-              </div>
-            ))}
+                  <button
+                    onClick={() => refreshMeal(meal.id)}
+                    className="saved-meal-open-btn"
+                  >
+                    <div className="saved-meal-title">{meal.title}</div>
+                    <div className="saved-meal-date">
+                      آخر تعديل: {new Date(meal.updated_at).toLocaleString()}
+                    </div>
+                    <div className="saved-meal-macros">
+                      <span>{mealTotals.kcal.toFixed(0)} kcal</span>
+                      <span>P {mealTotals.protein.toFixed(1)}</span>
+                      <span>F {mealTotals.fat.toFixed(1)}</span>
+                      <span>Fi {mealTotals.fiber.toFixed(1)}</span>
+                      <span>C {mealTotals.netCarb.toFixed(1)}</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => deleteMeal(meal.id)}
+                    className="danger-btn"
+                  >
+                    حذف الوجبة
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </aside>
 
@@ -558,12 +591,13 @@ export default function Page() {
                   const row = calcRow(item.foods, item.qty_g);
 
                   return (
-                    <div key={item.id} className="mobile-item-card">
-                      <div className="mobile-item-header">
-                        <div>
+                    <div key={item.id} className="mobile-row-card">
+                      <div className="mobile-row-top">
+                        <div className="mobile-row-food">
                           <div className="mobile-item-title">{item.foods.name_ar}</div>
                           <div className="mobile-item-note">{item.foods.notes || ""}</div>
                         </div>
+
                         <button
                           onClick={() => deleteItem(item.id)}
                           className="danger-btn small"
@@ -572,35 +606,39 @@ export default function Page() {
                         </button>
                       </div>
 
-                      <div className="mobile-qty-row">
-                        <label className="mobile-label">الكمية (غ)</label>
-                        <input
-                          type="number"
-                          value={item.qty_g}
-                          onChange={(e) => updateQty(item.id, Number(e.target.value))}
-                          className="qty-input full"
-                        />
-                      </div>
+                      <div className="mobile-inline-grid">
+                        <div className="mobile-inline-cell qty-cell">
+                          <span>الكمية</span>
+                          <input
+                            type="number"
+                            value={item.qty_g}
+                            onChange={(e) => updateQty(item.id, Number(e.target.value))}
+                            className="qty-input mobile-inline-input"
+                          />
+                        </div>
 
-                      <div className="mobile-stats-grid">
-                        <div className="mini-stat">
+                        <div className="mobile-inline-cell">
                           <span>السعرات</span>
                           <strong>{row.kcal.toFixed(1)}</strong>
                         </div>
-                        <div className="mini-stat">
+
+                        <div className="mobile-inline-cell">
                           <span>البروتين</span>
                           <strong>{row.protein.toFixed(1)}</strong>
                         </div>
-                        <div className="mini-stat">
+
+                        <div className="mobile-inline-cell">
                           <span>الدهون</span>
                           <strong>{row.fat.toFixed(1)}</strong>
                         </div>
-                        <div className="mini-stat">
+
+                        <div className="mobile-inline-cell">
                           <span>الألياف</span>
                           <strong>{row.fiber.toFixed(1)}</strong>
                         </div>
-                        <div className="mini-stat wide">
-                          <span>الكارب الصافي</span>
+
+                        <div className="mobile-inline-cell">
+                          <span>الكارب</span>
                           <strong>{row.netCarb.toFixed(1)}</strong>
                         </div>
                       </div>
