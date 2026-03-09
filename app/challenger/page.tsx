@@ -37,6 +37,33 @@ type MealItem = {
   foods: Food | null;
 };
 
+type Rule = {
+  id: string;
+  source_food_id?: string | null;
+  source_group_id?: string | null;
+  target_food_id?: string | null;
+  target_group_id?: string | null;
+  rule_type: string;
+  target_limit_g?: number | null;
+  notes?: string | null;
+};
+
+type Group = {
+  id: string;
+  code: string;
+  name_ar: string;
+};
+
+type Membership = {
+  food_id: string;
+  group_id: string;
+};
+
+type FoodName = {
+  id: string;
+  name_ar: string;
+};
+
 type MealRiskAnalysis = {
   totalSharedLoad: number;
   hasHighPotassium: boolean;
@@ -57,6 +84,11 @@ export default function ChallengerPage() {
   const [suggestions, setSuggestions] = useState<Food[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+
+  const [rules, setRules] = useState<Rule[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [memberships, setMemberships] = useState<Membership[]>([]);
+  const [foodNames, setFoodNames] = useState<FoodName[]>([]);
 
   useEffect(() => {
     async function createMeal() {
@@ -81,7 +113,28 @@ export default function ChallengerPage() {
       }
     }
 
+    async function loadRules() {
+      try {
+        const res = await fetch("/api/challenger/rules");
+        const data = await res.json();
+
+        if (!res.ok) {
+          console.error(data);
+          alert(data.error || "فشل في تحميل قواعد المتحدي");
+          return;
+        }
+
+        setRules(Array.isArray(data.rules) ? data.rules : []);
+        setGroups(Array.isArray(data.groups) ? data.groups : []);
+        setMemberships(Array.isArray(data.memberships) ? data.memberships : []);
+        setFoodNames(Array.isArray(data.foods) ? data.foods : []);
+      } catch (error) {
+        console.error("loadRules error:", error);
+      }
+    }
+
     createMeal();
+    loadRules();
   }, []);
 
   useEffect(() => {
@@ -234,6 +287,140 @@ export default function ChallengerPage() {
       messages,
     };
   }, [items]);
+
+  const violationsByItem = useMemo(() => {
+    const result: Record<string, string[]> = {};
+
+    const foodNameMap = Object.fromEntries(foodNames.map((f) => [f.id, f.name_ar]));
+    const groupNameMap = Object.fromEntries(groups.map((g) => [g.id, g.name_ar]));
+
+    const groupIdsByFood: Record<string, string[]> = {};
+    for (const m of memberships) {
+      if (!groupIdsByFood[m.food_id]) groupIdsByFood[m.food_id] = [];
+      groupIdsByFood[m.food_id].push(m.group_id);
+    }
+
+    const itemsWithFood = items.filter((item): item is MealItem & { foods: Food } => !!item.foods);
+
+    function addViolation(itemId: string, message: string) {
+      if (!result[itemId]) result[itemId] = [];
+      if (!result[itemId].includes(message)) result[itemId].push(message);
+    }
+
+    for (const item of itemsWithFood) {
+      const food = item.foods;
+
+      if (food.renal_group === "forbidden") {
+        addViolation(item.id, "هذا العنصر محظور على المتحدي.");
+      }
+
+      if (
+        food.renal_max_per_meal_g &&
+        item.qty_g > Number(food.renal_max_per_meal_g)
+      ) {
+        addViolation(
+          item.id,
+          `تم تجاوز الحد المسموح لكل وجبة: ${food.renal_max_per_meal_g}غ`
+        );
+      }
+
+      const ownGroupIds = groupIdsByFood[food.id] || [];
+      const otherItems = itemsWithFood.filter((x) => x.id !== item.id);
+
+      for (const rule of rules) {
+        const sourceMatchesFood = rule.source_food_id === food.id;
+        const sourceMatchesGroup =
+          !!rule.source_group_id && ownGroupIds.includes(rule.source_group_id);
+
+        if (!sourceMatchesFood && !sourceMatchesGroup) continue;
+
+        if (rule.rule_type === "forbid_same_day" || rule.rule_type === "forbid_same_meal") {
+          if (rule.target_food_id) {
+            const exists = otherItems.some((x) => x.foods.id === rule.target_food_id);
+            if (exists) {
+              const targetName = foodNameMap[rule.target_food_id] || "عنصر آخر";
+              addViolation(
+                item.id,
+                `لا ينبغي جمع هذا العنصر مع: ${targetName}`
+              );
+            }
+          }
+
+          if (rule.target_group_id) {
+            const exists = otherItems.some((x) =>
+              (groupIdsByFood[x.foods.id] || []).includes(rule.target_group_id!)
+            );
+            if (exists) {
+              const targetGroup = groupNameMap[rule.target_group_id] || "مجموعة أخرى";
+              addViolation(
+                item.id,
+                `لا ينبغي جمع هذا العنصر مع عناصر من مجموعة: ${targetGroup}`
+              );
+            }
+          }
+        }
+
+        if (rule.rule_type === "allow_only_one_from_target_group_per_day") {
+          if (rule.target_group_id) {
+            const sameGroupItems = itemsWithFood.filter((x) =>
+              (groupIdsByFood[x.foods.id] || []).includes(rule.target_group_id!)
+            );
+
+            if (sameGroupItems.length > 1) {
+              const groupName = groupNameMap[rule.target_group_id] || "هذه المجموعة";
+              if ((groupIdsByFood[food.id] || []).includes(rule.target_group_id)) {
+                addViolation(
+                  item.id,
+                  `يُسمح بعنصر واحد فقط يوميًا من مجموعة: ${groupName}`
+                );
+              }
+            }
+          }
+        }
+      }
+
+      for (const rule of rules) {
+        const targetIsCurrentFood = rule.target_food_id === food.id;
+        const targetIsCurrentGroup =
+          !!rule.target_group_id && ownGroupIds.includes(rule.target_group_id);
+
+        if (!targetIsCurrentFood && !targetIsCurrentGroup) continue;
+
+        let sourceExists = false;
+        let sourceName = "";
+
+        if (rule.source_food_id) {
+          sourceExists = otherItems.some((x) => x.foods.id === rule.source_food_id);
+          sourceName = foodNameMap[rule.source_food_id] || "عنصر آخر";
+        } else if (rule.source_group_id) {
+          sourceExists = otherItems.some((x) =>
+            (groupIdsByFood[x.foods.id] || []).includes(rule.source_group_id!)
+          );
+          sourceName = groupNameMap[rule.source_group_id] || "مجموعة أخرى";
+        }
+
+        if (!sourceExists) continue;
+
+        if (rule.rule_type === "forbid_same_day" || rule.rule_type === "forbid_same_meal") {
+          addViolation(
+            item.id,
+            `هذا العنصر لا ينبغي أن يجتمع مع: ${sourceName}`
+          );
+        }
+
+        if (rule.rule_type === "reduce_target_limit_same_day") {
+          if (rule.target_limit_g && item.qty_g > Number(rule.target_limit_g)) {
+            addViolation(
+              item.id,
+              `بسبب وجود ${sourceName} تم خفض الحد المسموح لهذا العنصر إلى ${rule.target_limit_g}غ`
+            );
+          }
+        }
+      }
+    }
+
+    return result;
+  }, [items, rules, memberships, groups, foodNames]);
 
   async function addItem(food: Food) {
     if (!mealId) return;
@@ -515,6 +702,7 @@ export default function ChallengerPage() {
                 }
 
                 const row = calcRow(item.foods, item.qty_g);
+                const violations = violationsByItem[item.id] || [];
 
                 return (
                   <tr key={item.id}>
@@ -528,6 +716,27 @@ export default function ChallengerPage() {
                           {item.foods.renal_limit_details}
                         </div>
                       ) : null}
+
+                      {violations.length > 0 && (
+                        <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
+                          {violations.map((msg, idx) => (
+                            <div
+                              key={idx}
+                              style={{
+                                color: "#b42318",
+                                background: "#fdecea",
+                                border: "1px solid #f3b8b2",
+                                borderRadius: 8,
+                                padding: "6px 8px",
+                                fontSize: 12,
+                                lineHeight: 1.5,
+                              }}
+                            >
+                              {msg}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </td>
 
                     <td style={tdStyle}>
