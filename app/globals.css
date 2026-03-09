@@ -74,7 +74,7 @@ input {
 
 .sidebar-card,
 .card,
-.mobile-item-card,
+.mobile-row-card,
 .stat-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -318,16 +318,21 @@ input {
   gap: 12px;
 }
 
-.mobile-item-card {
+.mobile-row-card {
   padding: 14px;
+  display: grid;
+  gap: 12px;
 }
 
-.mobile-item-header {
+.mobile-row-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 12px;
+}
+
+.mobile-row-food {
+  min-width: 0;
 }
 
 .mobile-item-title {
@@ -341,45 +346,40 @@ input {
   font-size: 0.82rem;
 }
 
-.mobile-qty-row {
+.mobile-inline-grid {
   display: grid;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.mobile-label {
-  font-size: 0.9rem;
-  color: var(--muted);
-}
-
-.mobile-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 
-.mini-stat {
-  padding: 12px;
-  border-radius: 14px;
+.mobile-inline-cell {
   background: var(--surface-2);
   border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
-.mini-stat.wide {
-  grid-column: span 2;
-}
-
-.mini-stat span {
+.mobile-inline-cell span {
+  font-size: 0.78rem;
   color: var(--muted);
-  font-size: 0.82rem;
 }
 
-.mini-stat strong {
-  font-size: 1rem;
+.mobile-inline-cell strong {
+  font-size: 0.96rem;
   color: var(--text);
+  font-weight: 800;
+}
+
+.qty-cell {
+  grid-column: span 3;
+}
+
+.mobile-inline-input {
+  width: 100%;
 }
 
 .loading-card {
@@ -454,5 +454,15 @@ input {
 
   .saved-meals-list {
     max-height: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .mobile-inline-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .qty-cell {
+    grid-column: span 2;
   }
 }
