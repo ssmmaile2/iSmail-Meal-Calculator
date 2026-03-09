@@ -110,7 +110,11 @@ export default function Page() {
         return;
       }
 
-      setSavedMeals(Array.isArray(data) ? data : []);
+      const filtered = Array.isArray(data)
+        ? data.filter((meal) => Array.isArray(meal.items) && meal.items.length > 0)
+        : [];
+
+      setSavedMeals(filtered);
     } catch (error) {
       console.error("loadSavedMeals error:", error);
     }
@@ -216,7 +220,7 @@ export default function Page() {
 
       setMealTitle(data.title || "وجبة جديدة");
       await loadSavedMeals();
-      alert("تم حفظ الوجبة");
+      alert("تم الحفظ");
     } catch (error) {
       console.error(error);
       alert("حدث خطأ أثناء الحفظ");
@@ -385,16 +389,8 @@ export default function Page() {
 
   return (
     <main className="page-shell" dir="rtl">
-      <div className="app-header">
-        <div>
-          <h1 className="app-title">meal calculator</h1>
-          <p className="app-subtitle">
-            ابحث عن المكوّن، حدّد الكمية، ثم احفظ الوجبة أو عدّلها لاحقًا بسهولة.
-          </p>
-        </div>
-        <button onClick={createNewMeal} className="primary-btn">
-          وجبة جديدة
-        </button>
+      <div className="app-header centered">
+        <h1 className="app-title">Meal Calculator</h1>
       </div>
 
       <div className="app-layout">
@@ -422,11 +418,11 @@ export default function Page() {
                       آخر تعديل: {new Date(meal.updated_at).toLocaleString()}
                     </div>
                     <div className="saved-meal-macros">
-                      <span>{mealTotals.kcal.toFixed(0)} kcal</span>
-                      <span>P {mealTotals.protein.toFixed(1)}</span>
-                      <span>F {mealTotals.fat.toFixed(1)}</span>
-                      <span>Fi {mealTotals.fiber.toFixed(1)}</span>
-                      <span>C {mealTotals.netCarb.toFixed(1)}</span>
+                      <span>{Math.round(mealTotals.kcal)}Kc</span>
+                      <span>{Math.round(mealTotals.protein)}P</span>
+                      <span>{Math.round(mealTotals.fiber)}F</span>
+                      <span>{Math.round(mealTotals.fat)}G</span>
+                      <span>{Math.round(mealTotals.netCarb)}Crb</span>
                     </div>
                   </button>
 
@@ -444,38 +440,48 @@ export default function Page() {
 
         <section className="content-column">
           <div className="card form-card">
-            <div className="title-row">
+            <div className="meal-actions-row">
+              <button
+                onClick={createNewMeal}
+                className="secondary-btn"
+              >
+                وجبة جديدة
+              </button>
+
               <input
                 value={mealTitle}
                 onChange={(e) => setMealTitle(e.target.value)}
                 placeholder="اسم الوجبة"
                 className="app-input"
               />
+
               <button
                 onClick={saveMealTitle}
                 disabled={savingTitle}
-                className="primary-btn"
+                className="primary-btn blue"
               >
-                حفظ الوجبة
+                حفظ
               </button>
             </div>
 
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="ابحث عن مكوّن... مثال: باذنجان / سردين / سلطة"
-              className="app-input"
-            />
+            <div className="search-row">
+              <input
+                type="number"
+                value={qty}
+                onChange={(e) =>
+                  setQty(e.target.value === "" ? "" : Number(e.target.value))
+                }
+                placeholder="الكمية"
+                className="qty-side-input"
+              />
 
-            <input
-              type="number"
-              value={qty}
-              onChange={(e) =>
-                setQty(e.target.value === "" ? "" : Number(e.target.value))
-              }
-              placeholder="الكمية بالغرام"
-              className="app-input"
-            />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="ابحث عن مكوّن..."
+                className="app-input"
+              />
+            </div>
 
             {suggestions.length > 0 && (
               <div className="suggestions-box">
@@ -502,23 +508,23 @@ export default function Page() {
           <div className="totals-grid">
             <div className="stat-card">
               <span className="stat-label">السعرات</span>
-              <span className="stat-value">{totals.kcal.toFixed(1)}</span>
+              <span className="stat-value">{Math.round(totals.kcal)}</span>
             </div>
             <div className="stat-card">
               <span className="stat-label">البروتين</span>
-              <span className="stat-value">{totals.protein.toFixed(1)}</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">الدهون</span>
-              <span className="stat-value">{totals.fat.toFixed(1)}</span>
+              <span className="stat-value">{Math.round(totals.protein)}</span>
             </div>
             <div className="stat-card">
               <span className="stat-label">الألياف</span>
-              <span className="stat-value">{totals.fiber.toFixed(1)}</span>
+              <span className="stat-value">{Math.round(totals.fiber)}</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">الدهون</span>
+              <span className="stat-value">{Math.round(totals.fat)}</span>
             </div>
             <div className="stat-card">
               <span className="stat-label">الكارب الصافي</span>
-              <span className="stat-value">{totals.netCarb.toFixed(1)}</span>
+              <span className="stat-value">{Math.round(totals.netCarb)}</span>
             </div>
           </div>
 
@@ -534,8 +540,8 @@ export default function Page() {
                       <th>الكمية (غ)</th>
                       <th>السعرات</th>
                       <th>البروتين</th>
-                      <th>الدهون</th>
                       <th>الألياف</th>
+                      <th>الدهون</th>
                       <th>الكارب الصافي</th>
                       <th>حذف</th>
                     </tr>
@@ -564,11 +570,11 @@ export default function Page() {
                               className="qty-input"
                             />
                           </td>
-                          <td>{row.kcal.toFixed(1)}</td>
-                          <td>{row.protein.toFixed(1)}</td>
-                          <td>{row.fat.toFixed(1)}</td>
-                          <td>{row.fiber.toFixed(1)}</td>
-                          <td>{row.netCarb.toFixed(1)}</td>
+                          <td>{Math.round(row.kcal)}</td>
+                          <td>{Math.round(row.protein)}</td>
+                          <td>{Math.round(row.fiber)}</td>
+                          <td>{Math.round(row.fat)}</td>
+                          <td>{Math.round(row.netCarb)}</td>
                           <td>
                             <button
                               onClick={() => deleteItem(item.id)}
@@ -618,28 +624,28 @@ export default function Page() {
                         </div>
 
                         <div className="mobile-inline-cell">
-                          <span>السعرات</span>
-                          <strong>{row.kcal.toFixed(1)}</strong>
+                          <span>Kc</span>
+                          <strong>{Math.round(row.kcal)}</strong>
                         </div>
 
                         <div className="mobile-inline-cell">
-                          <span>البروتين</span>
-                          <strong>{row.protein.toFixed(1)}</strong>
+                          <span>P</span>
+                          <strong>{Math.round(row.protein)}</strong>
                         </div>
 
                         <div className="mobile-inline-cell">
-                          <span>الدهون</span>
-                          <strong>{row.fat.toFixed(1)}</strong>
+                          <span>F</span>
+                          <strong>{Math.round(row.fiber)}</strong>
                         </div>
 
                         <div className="mobile-inline-cell">
-                          <span>الألياف</span>
-                          <strong>{row.fiber.toFixed(1)}</strong>
+                          <span>G</span>
+                          <strong>{Math.round(row.fat)}</strong>
                         </div>
 
                         <div className="mobile-inline-cell">
-                          <span>الكارب</span>
-                          <strong>{row.netCarb.toFixed(1)}</strong>
+                          <span>Crb</span>
+                          <strong>{Math.round(row.netCarb)}</strong>
                         </div>
                       </div>
                     </div>
