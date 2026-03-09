@@ -359,6 +359,4 @@ const saveButtonStyle: React.CSSProperties = {
   border: "1px solid #ddd",
   background: "#111827",
   color: "white",
-  cursor: "pointer",
-  fontWeight: 600,
-};
+  
