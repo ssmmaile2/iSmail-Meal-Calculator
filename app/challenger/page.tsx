@@ -59,6 +59,22 @@ const NUTS_CONFLICT_NAMES = [
   "جوز البرازيل",
 ];
 
+const DENSE_LEGUMES_CONFLICT_NAMES = [
+  "عدس جاف",
+  "حمص جاف",
+  "فول مجفف",
+  "فاصوليا بيضاء جافة",
+  "فاصوليا حمراء جافة",
+  "لوبيا جافة",
+  "ترمس جاف",
+  "بازلاء جافة",
+  "طبق العدس الخاص بمسافرنا",
+  "لوبيّة مسافرنا",
+  "ترمس مسافرنا",
+  "بيصارة البازلاء الخاصة",
+  "بيصارة الفول الخاصة",
+];
+
 function normalizeArabic(text: string) {
   return text
     .toLowerCase()
@@ -226,6 +242,20 @@ export default function ChallengerPage() {
       messages.push(
         "الوجبة تجمع بين عنصر مرتفع البوتاسيوم وعنصر مرتفع الفوسفور وبروتين مركز."
       );
+    } else {
+      if (hasHighPotassium && hasHighPhosphorus) {
+        messages.push("الوجبة تجمع بين عنصر مرتفع البوتاسيوم وعنصر مرتفع الفوسفور.");
+      }
+      if (hasHighPotassium && hasDenseProtein) {
+        messages.push("الوجبة تجمع بين عنصر مرتفع البوتاسيوم وبروتين مركز.");
+      }
+      if (hasHighPhosphorus && hasDenseProtein) {
+        messages.push("الوجبة تجمع بين عنصر مرتفع الفوسفور وبروتين مركز.");
+      }
+    }
+
+    if (!redAlert && totalSharedLoad >= 4) {
+      messages.push("الحمولة المشتركة للوجبة مرتفعة نسبيًا حتى دون بلوغ أعلى مستوى تحذير.");
     }
 
     return {
@@ -253,7 +283,7 @@ export default function ChallengerPage() {
       (item): item is MealItem & { foods: Food } => !!item.foods
     );
 
-    // 1) تجاوز الحد لكل وجبة
+    // 1) تجاوز الحد لكل وجبة + المحظور
     for (const item of itemsWithFood) {
       const max = item.foods.renal_max_per_meal_g;
       if (max && item.qty_g > Number(max)) {
@@ -265,7 +295,7 @@ export default function ChallengerPage() {
       }
     }
 
-    // 2) منع اجتماع المكسرات المتنافسة - محليًا وبشكل مباشر
+    // 2) منع اجتماع المكسرات المتنافسة
     const nutItems = itemsWithFood.filter((item) =>
       NUTS_CONFLICT_NAMES.map(normalizeArabic).includes(
         normalizeArabic(item.foods.name_ar)
@@ -282,6 +312,28 @@ export default function ChallengerPage() {
           addViolation(
             item.id,
             `لا ينبغي جمع هذا العنصر مع: ${others.join("، ")}`
+          );
+        }
+      }
+    }
+
+    // 3) منع اجتماع البقول المركزة
+    const denseLegumeItems = itemsWithFood.filter((item) =>
+      DENSE_LEGUMES_CONFLICT_NAMES.map(normalizeArabic).includes(
+        normalizeArabic(item.foods.name_ar)
+      )
+    );
+
+    if (denseLegumeItems.length > 1) {
+      for (const item of denseLegumeItems) {
+        const others = denseLegumeItems
+          .filter((x) => x.id !== item.id)
+          .map((x) => x.foods.name_ar);
+
+        if (others.length > 0) {
+          addViolation(
+            item.id,
+            `لا ينبغي جمع هذا العنصر مع بقول مركزة أخرى في نفس اليوم: ${others.join("، ")}`
           );
         }
       }
@@ -436,7 +488,7 @@ export default function ChallengerPage() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="ابحث: لوز / جوز / فول سوداني / أفوكادو / بطاطس"
+          placeholder="ابحث: لوز / جوز / فول سوداني / عدس / لوبيا / أفوكادو"
           style={inputStyle}
         />
 
