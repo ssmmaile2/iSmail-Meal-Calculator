@@ -505,139 +505,77 @@ export default function Page() {
             )}
           </div>
 
-          <div className="totals-line">
-            <span className="macro-chip">🌾 {Math.round(totals.netCarb)}Crb</span>
-            <span className="macro-chip">🧈 {Math.round(totals.fat)}G</span>
-            <span className="macro-chip">🌿 {Math.round(totals.fiber)}F</span>
-            <span className="macro-chip">🥩 {Math.round(totals.protein)}P</span>
-            <span className="macro-chip">🔥 {Math.round(totals.kcal)}Kc</span>
-          </div>
-
           {loading ? (
             <div className="card loading-card">جاري التحميل...</div>
           ) : (
-            <>
-              <div className="desktop-table-wrap card">
-                <table className="meal-table">
-                  <thead>
-                    <tr>
-                      <th>المكوّن</th>
-                      <th>الكمية (غ)</th>
-                      <th>السعرات</th>
-                      <th>البروتين</th>
-                      <th>الألياف</th>
-                      <th>الدهون</th>
-                      <th>الكارب الصافي</th>
-                      <th>حذف</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((item) => {
-                      if (!item.foods) return null;
+            <div className="desktop-table-wrap card">
+              <table className="meal-table">
+                <thead>
+                  <tr>
+                    <th>المكوّن</th>
+                    <th>الكمية (غ)</th>
+                    <th>Kc</th>
+                    <th>P</th>
+                    <th>F</th>
+                    <th>G</th>
+                    <th>Crb</th>
+                    <th>حذف</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item) => {
+                    if (!item.foods) return null;
 
-                      const row = calcRow(item.foods, item.qty_g);
+                    const row = calcRow(item.foods, item.qty_g);
 
-                      return (
-                        <tr key={item.id}>
-                          <td>
-                            <div className="table-food-title">{item.foods.name_ar}</div>
-                            <div className="table-food-note">
-                              {item.foods.notes || ""}
-                            </div>
-                          </td>
-                          <td>
-                            <input
-                              type="number"
-                              value={item.qty_g}
-                              onChange={(e) =>
-                                updateQty(item.id, Number(e.target.value))
-                              }
-                              className="qty-input"
-                            />
-                          </td>
-                          <td>{Math.round(row.kcal)}</td>
-                          <td>{Math.round(row.protein)}</td>
-                          <td>{Math.round(row.fiber)}</td>
-                          <td>{Math.round(row.fat)}</td>
-                          <td>{Math.round(row.netCarb)}</td>
-                          <td>
-                            <button
-                              onClick={() => deleteItem(item.id)}
-                              className="danger-btn small"
-                            >
-                              حذف
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="mobile-cards">
-                {items.map((item) => {
-                  if (!item.foods) return null;
-
-                  const row = calcRow(item.foods, item.qty_g);
-
-                  return (
-                    <div key={item.id} className="mobile-row-card">
-                      <div className="mobile-row-top">
-                        <div className="mobile-row-food">
-                          <div className="mobile-item-title">{item.foods.name_ar}</div>
-                          <div className="mobile-item-note">{item.foods.notes || ""}</div>
-                        </div>
-
-                        <button
-                          onClick={() => deleteItem(item.id)}
-                          className="danger-btn small"
-                        >
-                          حذف
-                        </button>
-                      </div>
-
-                      <div className="mobile-inline-grid">
-                        <div className="mobile-inline-cell qty-cell">
-                          <span>الكمية</span>
+                    return (
+                      <tr key={item.id}>
+                        <td>
+                          <div className="table-food-title">{item.foods.name_ar}</div>
+                          <div className="table-food-note">
+                            {item.foods.notes || ""}
+                          </div>
+                        </td>
+                        <td>
                           <input
                             type="number"
                             value={item.qty_g}
-                            onChange={(e) => updateQty(item.id, Number(e.target.value))}
-                            className="qty-input mobile-inline-input"
+                            onChange={(e) =>
+                              updateQty(item.id, Number(e.target.value))
+                            }
+                            className="qty-input"
                           />
-                        </div>
+                        </td>
+                        <td>{Math.round(row.kcal)}</td>
+                        <td>{Math.round(row.protein)}</td>
+                        <td>{Math.round(row.fiber)}</td>
+                        <td>{Math.round(row.fat)}</td>
+                        <td>{Math.round(row.netCarb)}</td>
+                        <td>
+                          <button
+                            onClick={() => deleteItem(item.id)}
+                            className="danger-btn small"
+                          >
+                            حذف
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
 
-                        <div className="mobile-inline-cell">
-                          <span>Crb</span>
-                          <strong>{Math.round(row.netCarb)}</strong>
-                        </div>
-
-                        <div className="mobile-inline-cell">
-                          <span>G</span>
-                          <strong>{Math.round(row.fat)}</strong>
-                        </div>
-
-                        <div className="mobile-inline-cell">
-                          <span>F</span>
-                          <strong>{Math.round(row.fiber)}</strong>
-                        </div>
-
-                        <div className="mobile-inline-cell">
-                          <span>P</span>
-                          <strong>{Math.round(row.protein)}</strong>
-                        </div>
-
-                        <div className="mobile-inline-cell">
-                          <span>Kc</span>
-                          <strong>{Math.round(row.kcal)}</strong>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
+                  <tr className="totals-row">
+                    <td className="totals-label">الإجمالي</td>
+                    <td></td>
+                    <td>{Math.round(totals.kcal)}</td>
+                    <td>{Math.round(totals.protein)}</td>
+                    <td>{Math.round(totals.fiber)}</td>
+                    <td>{Math.round(totals.fat)}</td>
+                    <td>{Math.round(totals.netCarb)}</td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
       </div>
