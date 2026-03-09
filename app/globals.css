@@ -178,9 +178,10 @@ input {
   gap: 12px;
 }
 
+/* مهم: 3 أعمدة دائمًا */
 .meal-actions-row {
   display: grid;
-  grid-template-columns: 130px 1fr 130px;
+  grid-template-columns: 120px minmax(0, 1fr) 120px;
   gap: 10px;
   align-items: center;
 }
@@ -219,6 +220,7 @@ input {
   cursor: pointer;
   font-weight: 700;
   transition: 0.2s ease;
+  white-space: nowrap;
 }
 
 .primary-btn {
@@ -450,8 +452,10 @@ input {
     font-size: 1.8rem;
   }
 
+  /* نبقي نفس الترتيب حتى على الهاتف */
   .meal-actions-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 92px minmax(0, 1fr) 92px;
+    gap: 8px;
   }
 
   .search-row {
@@ -473,6 +477,18 @@ input {
   .totals-line {
     justify-content: flex-start;
   }
+
+  .primary-btn,
+  .secondary-btn,
+  .danger-btn {
+    padding: 11px 10px;
+    font-size: 0.9rem;
+  }
+
+  .app-input,
+  .qty-side-input {
+    padding: 12px 12px;
+  }
 }
 
 @media (max-width: 420px) {
@@ -486,5 +502,9 @@ input {
 
   .search-row {
     grid-template-columns: 85px 1fr;
+  }
+
+  .meal-actions-row {
+    grid-template-columns: 82px minmax(0, 1fr) 82px;
   }
 }
