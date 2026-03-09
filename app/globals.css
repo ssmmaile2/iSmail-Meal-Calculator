@@ -74,7 +74,6 @@ input {
 
 .sidebar-card,
 .card,
-.mobile-row-card,
 .stat-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -178,7 +177,6 @@ input {
   gap: 12px;
 }
 
-/* مهم: 3 أعمدة دائمًا */
 .meal-actions-row {
   display: grid;
   grid-template-columns: 120px minmax(0, 1fr) 120px;
@@ -313,7 +311,9 @@ input {
 }
 
 .desktop-table-wrap {
+  display: block;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .meal-table {
@@ -354,79 +354,27 @@ input {
   background: white;
 }
 
-.mobile-cards {
-  display: none;
-  gap: 12px;
-}
-
-.mobile-row-card {
-  padding: 14px;
-  display: grid;
-  gap: 12px;
-}
-
-.mobile-row-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.mobile-row-food {
-  min-width: 0;
-}
-
-.mobile-item-title {
-  font-weight: 800;
-  font-size: 1rem;
-}
-
-.mobile-item-note {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 0.82rem;
-}
-
-.mobile-inline-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-
-.mobile-inline-cell {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.mobile-inline-cell span {
-  font-size: 0.78rem;
-  color: var(--muted);
-}
-
-.mobile-inline-cell strong {
-  font-size: 0.96rem;
-  color: var(--text);
-  font-weight: 800;
-}
-
-.qty-cell {
-  grid-column: span 3;
-}
-
-.mobile-inline-input {
-  width: 100%;
-}
-
 .loading-card {
   text-align: center;
   color: var(--muted);
   padding: 28px;
+}
+
+/* إخفاء البطاقات دائمًا */
+.mobile-cards {
+  display: none !important;
+}
+
+.mobile-row-card,
+.mobile-row-top,
+.mobile-row-food,
+.mobile-item-title,
+.mobile-item-note,
+.mobile-inline-grid,
+.mobile-inline-cell,
+.qty-cell,
+.mobile-inline-input {
+  display: none;
 }
 
 @media (max-width: 980px) {
@@ -452,7 +400,6 @@ input {
     font-size: 1.8rem;
   }
 
-  /* نبقي نفس الترتيب حتى على الهاتف */
   .meal-actions-row {
     grid-template-columns: 92px minmax(0, 1fr) 92px;
     gap: 8px;
@@ -462,12 +409,9 @@ input {
     grid-template-columns: 90px 1fr;
   }
 
+  /* نبقي الجدول ظاهرًا حتى على الهاتف */
   .desktop-table-wrap {
-    display: none;
-  }
-
-  .mobile-cards {
-    display: grid;
+    display: block;
   }
 
   .saved-meals-list {
@@ -489,22 +433,28 @@ input {
   .qty-side-input {
     padding: 12px 12px;
   }
+
+  .meal-table {
+    min-width: 760px;
+  }
+
+  .meal-table th,
+  .meal-table td {
+    padding: 12px 10px;
+    font-size: 0.9rem;
+  }
 }
 
 @media (max-width: 420px) {
-  .mobile-inline-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .qty-cell {
-    grid-column: span 2;
-  }
-
   .search-row {
     grid-template-columns: 85px 1fr;
   }
 
   .meal-actions-row {
     grid-template-columns: 82px minmax(0, 1fr) 82px;
+  }
+
+  .meal-table {
+    min-width: 700px;
   }
 }
