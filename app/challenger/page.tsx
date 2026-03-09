@@ -142,6 +142,7 @@ const DENSE_ANIMAL_PROTEIN_CONFLICT_NAMES = [
 
 const HIGH_POTASSIUM_FRUITS_CONFLICT_NAMES = [
   "أفوكادو",
+  "افوكادو",
   "موز",
   "كيوي",
   "رمان",
@@ -358,7 +359,6 @@ export default function ChallengerPage() {
       (item): item is MealItem & { foods: Food } => !!item.foods
     );
 
-    // 1) تجاوز الحد لكل وجبة + المحظور
     for (const item of itemsWithFood) {
       const max = item.foods.renal_max_per_meal_g;
       if (max && item.qty_g > Number(max)) {
@@ -370,7 +370,6 @@ export default function ChallengerPage() {
       }
     }
 
-    // 2) منع اجتماع المكسرات المتنافسة
     const nutItems = itemsWithFood.filter((item) =>
       NUTS_CONFLICT_NAMES.map(normalizeArabic).includes(
         normalizeArabic(item.foods.name_ar)
@@ -379,20 +378,13 @@ export default function ChallengerPage() {
 
     if (nutItems.length > 1) {
       for (const item of nutItems) {
-        const others = nutItems
-          .filter((x) => x.id !== item.id)
-          .map((x) => x.foods.name_ar);
-
+        const others = nutItems.filter((x) => x.id !== item.id).map((x) => x.foods.name_ar);
         if (others.length > 0) {
-          addViolation(
-            item.id,
-            `لا ينبغي جمع هذا العنصر مع: ${others.join("، ")}`
-          );
+          addViolation(item.id, `لا ينبغي جمع هذا العنصر مع: ${others.join("، ")}`);
         }
       }
     }
 
-    // 3) منع اجتماع البقول المركزة
     const denseLegumeItems = itemsWithFood.filter((item) =>
       DENSE_LEGUMES_CONFLICT_NAMES.map(normalizeArabic).includes(
         normalizeArabic(item.foods.name_ar)
@@ -401,20 +393,13 @@ export default function ChallengerPage() {
 
     if (denseLegumeItems.length > 1) {
       for (const item of denseLegumeItems) {
-        const others = denseLegumeItems
-          .filter((x) => x.id !== item.id)
-          .map((x) => x.foods.name_ar);
-
+        const others = denseLegumeItems.filter((x) => x.id !== item.id).map((x) => x.foods.name_ar);
         if (others.length > 0) {
-          addViolation(
-            item.id,
-            `لا ينبغي جمع هذا العنصر مع بقول مركزة أخرى في نفس اليوم: ${others.join("، ")}`
-          );
+          addViolation(item.id, `لا ينبغي جمع هذا العنصر مع بقول مركزة أخرى في نفس اليوم: ${others.join("، ")}`);
         }
       }
     }
 
-    // 4) منع اجتماع الألبان المركزة
     const denseDairyItems = itemsWithFood.filter((item) =>
       DENSE_DAIRY_CONFLICT_NAMES.map(normalizeArabic).includes(
         normalizeArabic(item.foods.name_ar)
@@ -423,20 +408,13 @@ export default function ChallengerPage() {
 
     if (denseDairyItems.length > 1) {
       for (const item of denseDairyItems) {
-        const others = denseDairyItems
-          .filter((x) => x.id !== item.id)
-          .map((x) => x.foods.name_ar);
-
+        const others = denseDairyItems.filter((x) => x.id !== item.id).map((x) => x.foods.name_ar);
         if (others.length > 0) {
-          addViolation(
-            item.id,
-            `لا ينبغي جمع هذا العنصر مع ألبان مركزة أخرى في نفس اليوم: ${others.join("، ")}`
-          );
+          addViolation(item.id, `لا ينبغي جمع هذا العنصر مع ألبان مركزة أخرى في نفس اليوم: ${others.join("، ")}`);
         }
       }
     }
 
-    // 5) منع اجتماع البروتين الحيواني المركز
     const denseAnimalProteinItems = itemsWithFood.filter((item) =>
       DENSE_ANIMAL_PROTEIN_CONFLICT_NAMES.map(normalizeArabic).includes(
         normalizeArabic(item.foods.name_ar)
@@ -445,20 +423,13 @@ export default function ChallengerPage() {
 
     if (denseAnimalProteinItems.length > 1) {
       for (const item of denseAnimalProteinItems) {
-        const others = denseAnimalProteinItems
-          .filter((x) => x.id !== item.id)
-          .map((x) => x.foods.name_ar);
-
+        const others = denseAnimalProteinItems.filter((x) => x.id !== item.id).map((x) => x.foods.name_ar);
         if (others.length > 0) {
-          addViolation(
-            item.id,
-            `لا ينبغي جمع هذا العنصر مع بروتين حيواني مركز آخر في نفس اليوم: ${others.join("، ")}`
-          );
+          addViolation(item.id, `لا ينبغي جمع هذا العنصر مع بروتين حيواني مركز آخر في نفس اليوم: ${others.join("، ")}`);
         }
       }
     }
 
-    // 6) منع اجتماع الفواكه الأعلى بوتاسيوم
     const highPotFruitItems = itemsWithFood.filter((item) =>
       HIGH_POTASSIUM_FRUITS_CONFLICT_NAMES.map(normalizeArabic).includes(
         normalizeArabic(item.foods.name_ar)
@@ -467,15 +438,9 @@ export default function ChallengerPage() {
 
     if (highPotFruitItems.length > 1) {
       for (const item of highPotFruitItems) {
-        const others = highPotFruitItems
-          .filter((x) => x.id !== item.id)
-          .map((x) => x.foods.name_ar);
-
+        const others = highPotFruitItems.filter((x) => x.id !== item.id).map((x) => x.foods.name_ar);
         if (others.length > 0) {
-          addViolation(
-            item.id,
-            `لا ينبغي جمع هذا العنصر مع فواكه أخرى أعلى بوتاسيوم في نفس اليوم: ${others.join("، ")}`
-          );
+          addViolation(item.id, `لا ينبغي جمع هذا العنصر مع فواكه أخرى أعلى بوتاسيوم في نفس اليوم: ${others.join("، ")}`);
         }
       }
     }
