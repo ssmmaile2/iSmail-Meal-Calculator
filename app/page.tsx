@@ -418,11 +418,11 @@ export default function Page() {
                       آخر تعديل: {new Date(meal.updated_at).toLocaleString()}
                     </div>
                     <div className="saved-meal-macros">
-                      <span>{Math.round(mealTotals.kcal)}Kc</span>
-                      <span>{Math.round(mealTotals.protein)}P</span>
-                      <span>{Math.round(mealTotals.fiber)}F</span>
-                      <span>{Math.round(mealTotals.fat)}G</span>
-                      <span>{Math.round(mealTotals.netCarb)}Crb</span>
+                      <span>🌾 {Math.round(mealTotals.netCarb)}Crb</span>
+                      <span>🧈 {Math.round(mealTotals.fat)}G</span>
+                      <span>🌿 {Math.round(mealTotals.fiber)}F</span>
+                      <span>🥩 {Math.round(mealTotals.protein)}P</span>
+                      <span>🔥 {Math.round(mealTotals.kcal)}Kc</span>
                     </div>
                   </button>
 
@@ -443,7 +443,7 @@ export default function Page() {
             <div className="meal-actions-row">
               <button
                 onClick={createNewMeal}
-                className="secondary-btn"
+                className="primary-btn green-btn"
               >
                 وجبة جديدة
               </button>
@@ -505,27 +505,12 @@ export default function Page() {
             )}
           </div>
 
-          <div className="totals-grid">
-            <div className="stat-card">
-              <span className="stat-label">السعرات</span>
-              <span className="stat-value">{Math.round(totals.kcal)}</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">البروتين</span>
-              <span className="stat-value">{Math.round(totals.protein)}</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">الألياف</span>
-              <span className="stat-value">{Math.round(totals.fiber)}</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">الدهون</span>
-              <span className="stat-value">{Math.round(totals.fat)}</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">الكارب الصافي</span>
-              <span className="stat-value">{Math.round(totals.netCarb)}</span>
-            </div>
+          <div className="totals-line">
+            <span className="macro-chip">🌾 {Math.round(totals.netCarb)}Crb</span>
+            <span className="macro-chip">🧈 {Math.round(totals.fat)}G</span>
+            <span className="macro-chip">🌿 {Math.round(totals.fiber)}F</span>
+            <span className="macro-chip">🥩 {Math.round(totals.protein)}P</span>
+            <span className="macro-chip">🔥 {Math.round(totals.kcal)}Kc</span>
           </div>
 
           {loading ? (
@@ -624,18 +609,8 @@ export default function Page() {
                         </div>
 
                         <div className="mobile-inline-cell">
-                          <span>Kc</span>
-                          <strong>{Math.round(row.kcal)}</strong>
-                        </div>
-
-                        <div className="mobile-inline-cell">
-                          <span>P</span>
-                          <strong>{Math.round(row.protein)}</strong>
-                        </div>
-
-                        <div className="mobile-inline-cell">
-                          <span>F</span>
-                          <strong>{Math.round(row.fiber)}</strong>
+                          <span>Crb</span>
+                          <strong>{Math.round(row.netCarb)}</strong>
                         </div>
 
                         <div className="mobile-inline-cell">
@@ -644,8 +619,18 @@ export default function Page() {
                         </div>
 
                         <div className="mobile-inline-cell">
-                          <span>Crb</span>
-                          <strong>{Math.round(row.netCarb)}</strong>
+                          <span>F</span>
+                          <strong>{Math.round(row.fiber)}</strong>
+                        </div>
+
+                        <div className="mobile-inline-cell">
+                          <span>P</span>
+                          <strong>{Math.round(row.protein)}</strong>
+                        </div>
+
+                        <div className="mobile-inline-cell">
+                          <span>Kc</span>
+                          <strong>{Math.round(row.kcal)}</strong>
                         </div>
                       </div>
                     </div>
