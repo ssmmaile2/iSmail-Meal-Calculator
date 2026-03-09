@@ -140,6 +140,16 @@ const DENSE_ANIMAL_PROTEIN_CONFLICT_NAMES = [
   "Painted comber",
 ];
 
+const HIGH_POTASSIUM_FRUITS_CONFLICT_NAMES = [
+  "أفوكادو",
+  "موز",
+  "كيوي",
+  "رمان",
+  "تمر",
+  "تين",
+  "برقوق مجفف",
+];
+
 function normalizeArabic(text: string) {
   return text
     .toLowerCase()
@@ -448,6 +458,28 @@ export default function ChallengerPage() {
       }
     }
 
+    // 6) منع اجتماع الفواكه الأعلى بوتاسيوم
+    const highPotFruitItems = itemsWithFood.filter((item) =>
+      HIGH_POTASSIUM_FRUITS_CONFLICT_NAMES.map(normalizeArabic).includes(
+        normalizeArabic(item.foods.name_ar)
+      )
+    );
+
+    if (highPotFruitItems.length > 1) {
+      for (const item of highPotFruitItems) {
+        const others = highPotFruitItems
+          .filter((x) => x.id !== item.id)
+          .map((x) => x.foods.name_ar);
+
+        if (others.length > 0) {
+          addViolation(
+            item.id,
+            `لا ينبغي جمع هذا العنصر مع فواكه أخرى أعلى بوتاسيوم في نفس اليوم: ${others.join("، ")}`
+          );
+        }
+      }
+    }
+
     return result;
   }, [items]);
 
@@ -597,7 +629,7 @@ export default function ChallengerPage() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="ابحث: لوز / جوز / فول سوداني / عدس / لوبيا / أفوكادو / لبنة"
+          placeholder="ابحث: لوز / جوز / عدس / لوبيا / لبنة / موز / أفوكادو"
           style={inputStyle}
         />
 
