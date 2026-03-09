@@ -75,6 +75,71 @@ const DENSE_LEGUMES_CONFLICT_NAMES = [
   "بيصارة الفول الخاصة",
 ];
 
+const DENSE_DAIRY_CONFLICT_NAMES = [
+  "لبنة",
+  "زبادي طبيعي كامل",
+  "زبادي منزوع الدسم",
+  "لبن رائب",
+  "حليب كامل الدسم (تجاري)",
+  "حليب نصف دسم",
+  "حليب منزوع الدسم",
+  "حليب بقري بلدي",
+  "حليب إبل كامل الدسم",
+  "جبن طري",
+  "جبن شيدر",
+  "جبن موزاريلا",
+  "جبن قريش",
+];
+
+const DENSE_ANIMAL_PROTEIN_CONFLICT_NAMES = [
+  "بيض دجاج",
+  "بيض ديك رومي",
+  "لحم بقر",
+  "لحم غنم",
+  "لحم ماعز",
+  "دجاج",
+  "دجاج بلدي",
+  "أرنب",
+  "لحم إبل (هبرة)",
+  "لحم الديك الرومي",
+  "لحم الدجاج الحبشي",
+  "كبد الإبل",
+  "قلب الإبل",
+  "رئة الإبل",
+  "كرشة الإبل",
+  "Thon (Skipjack)",
+  "Mullets",
+  "Rouget",
+  "Chinchard",
+  "Loup Moucheté",
+  "Sole",
+  "Courbine",
+  "Cepola",
+  "Grondin",
+  "Grondeur metis",
+  "Calamar",
+  "Merlan",
+  "Stromateus fiatola",
+  "Brama brama",
+  "Smelts / Luiset",
+  "Barrelfish",
+  "Lotte",
+  "Turbot",
+  "Baliste",
+  "Saupe SalpaSalpa",
+  "Crab",
+  "Mussels",
+  "Shrimp",
+  "Roe",
+  "Dorade",
+  "Octopus",
+  "Saint-Pierre",
+  "Maquereau",
+  "Sardine",
+  "Anchovy",
+  "Painted comber",
+];
+
 function normalizeArabic(text: string) {
   return text
     .toLowerCase()
@@ -339,6 +404,50 @@ export default function ChallengerPage() {
       }
     }
 
+    // 4) منع اجتماع الألبان المركزة
+    const denseDairyItems = itemsWithFood.filter((item) =>
+      DENSE_DAIRY_CONFLICT_NAMES.map(normalizeArabic).includes(
+        normalizeArabic(item.foods.name_ar)
+      )
+    );
+
+    if (denseDairyItems.length > 1) {
+      for (const item of denseDairyItems) {
+        const others = denseDairyItems
+          .filter((x) => x.id !== item.id)
+          .map((x) => x.foods.name_ar);
+
+        if (others.length > 0) {
+          addViolation(
+            item.id,
+            `لا ينبغي جمع هذا العنصر مع ألبان مركزة أخرى في نفس اليوم: ${others.join("، ")}`
+          );
+        }
+      }
+    }
+
+    // 5) منع اجتماع البروتين الحيواني المركز
+    const denseAnimalProteinItems = itemsWithFood.filter((item) =>
+      DENSE_ANIMAL_PROTEIN_CONFLICT_NAMES.map(normalizeArabic).includes(
+        normalizeArabic(item.foods.name_ar)
+      )
+    );
+
+    if (denseAnimalProteinItems.length > 1) {
+      for (const item of denseAnimalProteinItems) {
+        const others = denseAnimalProteinItems
+          .filter((x) => x.id !== item.id)
+          .map((x) => x.foods.name_ar);
+
+        if (others.length > 0) {
+          addViolation(
+            item.id,
+            `لا ينبغي جمع هذا العنصر مع بروتين حيواني مركز آخر في نفس اليوم: ${others.join("، ")}`
+          );
+        }
+      }
+    }
+
     return result;
   }, [items]);
 
@@ -488,7 +597,7 @@ export default function ChallengerPage() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="ابحث: لوز / جوز / فول سوداني / عدس / لوبيا / أفوكادو"
+          placeholder="ابحث: لوز / جوز / فول سوداني / عدس / لوبيا / أفوكادو / لبنة"
           style={inputStyle}
         />
 
@@ -579,6 +688,7 @@ export default function ChallengerPage() {
                   <tr key={item.id}>
                     <td style={tdStyle}>
                       <div style={{ fontWeight: 600 }}>{item.foods.name_ar}</div>
+
                       {item.foods.renal_limit_details ? (
                         <div style={{ fontSize: 12, color: "#8a5a00", marginTop: 4 }}>
                           {item.foods.renal_limit_details}
