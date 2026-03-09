@@ -466,3 +466,20 @@ input {
     grid-column: span 2;
   }
 }
+
+
+.saved-meal-macros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.saved-meal-macros span {
+  background: #f1f5f9;
+  color: #475569;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
