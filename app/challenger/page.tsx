@@ -37,33 +37,6 @@ type MealItem = {
   foods: Food | null;
 };
 
-type Rule = {
-  id: string;
-  source_food_id?: string | null;
-  source_group_id?: string | null;
-  target_food_id?: string | null;
-  target_group_id?: string | null;
-  rule_type: string;
-  target_limit_g?: number | null;
-  notes?: string | null;
-};
-
-type Group = {
-  id: string;
-  code: string;
-  name_ar: string;
-};
-
-type Membership = {
-  food_id: string;
-  group_id: string;
-};
-
-type FoodName = {
-  id: string;
-  name_ar: string;
-};
-
 type MealRiskAnalysis = {
   totalSharedLoad: number;
   hasHighPotassium: boolean;
@@ -86,6 +59,19 @@ const NUTS_CONFLICT_NAMES = [
   "جوز البرازيل",
 ];
 
+function normalizeArabic(text: string) {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي")
+    .replace(/ؤ/g, "و")
+    .replace(/ئ/g, "ي")
+    .replace(/[\u064B-\u065F\u0670]/g, "")
+    .replace(/\s+/g, " ");
+}
+
 export default function ChallengerPage() {
   const [mealId, setMealId] = useState<string | null>(null);
   const [items, setItems] = useState<MealItem[]>([]);
@@ -95,11 +81,6 @@ export default function ChallengerPage() {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
 
-  const [rules, setRules] = useState<Rule[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [memberships, setMemberships] = useState<Membership[]>([]);
-  const [foodNames, setFoodNames] = useState<FoodName[]>([]);
-
   useEffect(() => {
     async function createMeal() {
       try {
@@ -107,7 +88,6 @@ export default function ChallengerPage() {
         const meal = await res.json();
 
         if (!res.ok) {
-          console.error("Create meal failed:", meal);
           alert(meal.error || "فشل في إنشاء الوجبة");
           setLoading(false);
           return;
@@ -116,34 +96,14 @@ export default function ChallengerPage() {
         setMealId(meal.id);
         await refreshMeal(meal.id);
       } catch (error) {
-        console.error("createMeal error:", error);
+        console.error(error);
         alert("حدث خطأ أثناء إنشاء الوجبة");
       } finally {
         setLoading(false);
       }
     }
 
-    async function loadRules() {
-      try {
-        const res = await fetch("/api/challenger/rules");
-        const data = await res.json();
-
-        if (!res.ok) {
-          console.error("Rules API failed:", data);
-          return;
-        }
-
-        setRules(Array.isArray(data.rules) ? data.rules : []);
-        setGroups(Array.isArray(data.groups) ? data.groups : []);
-        setMemberships(Array.isArray(data.memberships) ? data.memberships : []);
-        setFoodNames(Array.isArray(data.foods) ? data.foods : []);
-      } catch (error) {
-        console.error("loadRules error:", error);
-      }
-    }
-
     createMeal();
-    loadRules();
   }, []);
 
   useEffect(() => {
@@ -158,13 +118,13 @@ export default function ChallengerPage() {
         const data = await res.json();
 
         if (!res.ok) {
-          console.error("Food search failed:", data);
+          console.error(data);
           return;
         }
 
         setSuggestions(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error("Food search error:", error);
+        console.error(error);
       }
     }, 250);
 
@@ -177,14 +137,13 @@ export default function ChallengerPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        console.error("GET /meal failed:", data);
         alert(data.error || "فشل في تحميل الوجبة");
         return;
       }
 
       setItems(Array.isArray(data.items) ? data.items : []);
     } catch (error) {
-      console.error("refreshMeal error:", error);
+      console.error(error);
       alert("حدث خطأ أثناء تحميل الوجبة");
     }
   }
@@ -205,7 +164,6 @@ export default function ChallengerPage() {
     return items.reduce(
       (acc, item) => {
         if (!item.foods) return acc;
-
         const row = calcRow(item.foods, item.qty_g);
         acc.kcal += row.kcal;
         acc.protein += row.protein;
@@ -266,22 +224,8 @@ export default function ChallengerPage() {
 
     if (hasHighPotassium && hasHighPhosphorus && hasDenseProtein) {
       messages.push(
-        "الوجبة تجمع بين عنصر مرتفع البوتاسيوم وعنصر مرتفع الفوسفور وبروتين مركز، وهذه حمولة مشتركة عالية."
+        "الوجبة تجمع بين عنصر مرتفع البوتاسيوم وعنصر مرتفع الفوسفور وبروتين مركز."
       );
-    } else {
-      if (hasHighPotassium && hasHighPhosphorus) {
-        messages.push("الوجبة تجمع بين عنصر مرتفع البوتاسيوم وعنصر مرتفع الفوسفور.");
-      }
-      if (hasHighPotassium && hasDenseProtein) {
-        messages.push("الوجبة تجمع بين عنصر مرتفع البوتاسيوم وبروتين مركز.");
-      }
-      if (hasHighPhosphorus && hasDenseProtein) {
-        messages.push("الوجبة تجمع بين عنصر مرتفع الفوسفور وبروتين مركز.");
-      }
-    }
-
-    if (!redAlert && totalSharedLoad >= 4) {
-      messages.push("الحمولة المشتركة للوجبة مرتفعة نسبيًا حتى دون بلوغ أعلى مستوى تحذير.");
     }
 
     return {
@@ -300,46 +244,32 @@ export default function ChallengerPage() {
   const violationsByItem = useMemo(() => {
     const result: Record<string, string[]> = {};
 
-    const foodNameMap = Object.fromEntries(foodNames.map((f) => [f.id, f.name_ar]));
-    const groupNameMap = Object.fromEntries(groups.map((g) => [g.id, g.name_ar]));
-
-    const groupIdsByFood: Record<string, string[]> = {};
-    for (const m of memberships) {
-      if (!groupIdsByFood[m.food_id]) groupIdsByFood[m.food_id] = [];
-      groupIdsByFood[m.food_id].push(m.group_id);
+    function addViolation(itemId: string, msg: string) {
+      if (!result[itemId]) result[itemId] = [];
+      if (!result[itemId].includes(msg)) result[itemId].push(msg);
     }
 
     const itemsWithFood = items.filter(
       (item): item is MealItem & { foods: Food } => !!item.foods
     );
 
-    function addViolation(itemId: string, message: string) {
-      if (!result[itemId]) result[itemId] = [];
-      if (!result[itemId].includes(message)) result[itemId].push(message);
-    }
-
-    // 1) تحقق فردي: الحد لكل وجبة + المحظور
+    // 1) تجاوز الحد لكل وجبة
     for (const item of itemsWithFood) {
-      const food = item.foods;
+      const max = item.foods.renal_max_per_meal_g;
+      if (max && item.qty_g > Number(max)) {
+        addViolation(item.id, `تم تجاوز الحد المسموح لكل وجبة: ${max}غ`);
+      }
 
-      if (food.renal_group === "forbidden") {
+      if (item.foods.renal_group === "forbidden") {
         addViolation(item.id, "هذا العنصر محظور على المتحدي.");
       }
-
-      if (
-        food.renal_max_per_meal_g &&
-        item.qty_g > Number(food.renal_max_per_meal_g)
-      ) {
-        addViolation(
-          item.id,
-          `تم تجاوز الحد المسموح لكل وجبة: ${food.renal_max_per_meal_g}غ`
-        );
-      }
     }
 
-    // 2) Fallback مباشر للمكسرات المتنافسة
+    // 2) منع اجتماع المكسرات المتنافسة - محليًا وبشكل مباشر
     const nutItems = itemsWithFood.filter((item) =>
-      NUTS_CONFLICT_NAMES.includes(item.foods.name_ar)
+      NUTS_CONFLICT_NAMES.map(normalizeArabic).includes(
+        normalizeArabic(item.foods.name_ar)
+      )
     );
 
     if (nutItems.length > 1) {
@@ -348,107 +278,17 @@ export default function ChallengerPage() {
           .filter((x) => x.id !== item.id)
           .map((x) => x.foods.name_ar);
 
-        addViolation(
-          item.id,
-          `لا ينبغي جمع هذا العنصر مع: ${others.join("، ")}`
-        );
-      }
-    }
-
-    // 3) منطق القواعد العامة من قاعدة البيانات
-    for (const item of itemsWithFood) {
-      const food = item.foods;
-      const ownGroupIds = groupIdsByFood[food.id] || [];
-      const otherItems = itemsWithFood.filter((x) => x.id !== item.id);
-
-      for (const rule of rules) {
-        const sourceMatchesFood = rule.source_food_id === food.id;
-        const sourceMatchesGroup =
-          !!rule.source_group_id && ownGroupIds.includes(rule.source_group_id);
-
-        if (!sourceMatchesFood && !sourceMatchesGroup) continue;
-
-        if (rule.rule_type === "forbid_same_day" || rule.rule_type === "forbid_same_meal") {
-          if (rule.target_food_id) {
-            const exists = otherItems.some((x) => x.foods.id === rule.target_food_id);
-            if (exists) {
-              const targetName = foodNameMap[rule.target_food_id] || "عنصر آخر";
-              addViolation(item.id, `لا ينبغي جمع هذا العنصر مع: ${targetName}`);
-            }
-          }
-
-          if (rule.target_group_id) {
-            const exists = otherItems.some((x) =>
-              (groupIdsByFood[x.foods.id] || []).includes(rule.target_group_id!)
-            );
-            if (exists) {
-              const targetGroup = groupNameMap[rule.target_group_id] || "مجموعة أخرى";
-              addViolation(
-                item.id,
-                `لا ينبغي جمع هذا العنصر مع عناصر من مجموعة: ${targetGroup}`
-              );
-            }
-          }
-        }
-
-        if (rule.rule_type === "allow_only_one_from_target_group_per_day") {
-          if (rule.target_group_id) {
-            const sameGroupItems = itemsWithFood.filter((x) =>
-              (groupIdsByFood[x.foods.id] || []).includes(rule.target_group_id!)
-            );
-
-            if (sameGroupItems.length > 1) {
-              if ((groupIdsByFood[food.id] || []).includes(rule.target_group_id)) {
-                const groupName = groupNameMap[rule.target_group_id] || "هذه المجموعة";
-                addViolation(
-                  item.id,
-                  `يُسمح بعنصر واحد فقط يوميًا من مجموعة: ${groupName}`
-                );
-              }
-            }
-          }
-        }
-      }
-
-      for (const rule of rules) {
-        const targetIsCurrentFood = rule.target_food_id === food.id;
-        const targetIsCurrentGroup =
-          !!rule.target_group_id && ownGroupIds.includes(rule.target_group_id);
-
-        if (!targetIsCurrentFood && !targetIsCurrentGroup) continue;
-
-        let sourceExists = false;
-        let sourceName = "";
-
-        if (rule.source_food_id) {
-          sourceExists = otherItems.some((x) => x.foods.id === rule.source_food_id);
-          sourceName = foodNameMap[rule.source_food_id] || "عنصر آخر";
-        } else if (rule.source_group_id) {
-          sourceExists = otherItems.some((x) =>
-            (groupIdsByFood[x.foods.id] || []).includes(rule.source_group_id!)
+        if (others.length > 0) {
+          addViolation(
+            item.id,
+            `لا ينبغي جمع هذا العنصر مع: ${others.join("، ")}`
           );
-          sourceName = groupNameMap[rule.source_group_id] || "مجموعة أخرى";
-        }
-
-        if (!sourceExists) continue;
-
-        if (rule.rule_type === "forbid_same_day" || rule.rule_type === "forbid_same_meal") {
-          addViolation(item.id, `هذا العنصر لا ينبغي أن يجتمع مع: ${sourceName}`);
-        }
-
-        if (rule.rule_type === "reduce_target_limit_same_day") {
-          if (rule.target_limit_g && item.qty_g > Number(rule.target_limit_g)) {
-            addViolation(
-              item.id,
-              `بسبب وجود ${sourceName} تم خفض الحد المسموح لهذا العنصر إلى ${rule.target_limit_g}غ`
-            );
-          }
         }
       }
     }
 
     return result;
-  }, [items, rules, memberships, groups, foodNames]);
+  }, [items]);
 
   async function addItem(food: Food) {
     if (!mealId) return;
@@ -477,7 +317,6 @@ export default function ChallengerPage() {
       const result = await res.json();
 
       if (!res.ok) {
-        console.error("POST /items failed:", result);
         alert(result.error || "فشل في إضافة العنصر");
         return;
       }
@@ -487,7 +326,7 @@ export default function ChallengerPage() {
       setSuggestions([]);
       setQty(100);
     } catch (error) {
-      console.error("addItem error:", error);
+      console.error(error);
       alert("حدث خطأ أثناء الإضافة");
     } finally {
       setAdding(false);
@@ -509,7 +348,6 @@ export default function ChallengerPage() {
       const result = await res.json();
 
       if (!res.ok) {
-        console.error("PATCH /items failed:", result);
         alert(result.error || "فشل في تعديل الكمية");
         return;
       }
@@ -520,7 +358,7 @@ export default function ChallengerPage() {
         )
       );
     } catch (error) {
-      console.error("updateQty error:", error);
+      console.error(error);
       alert("حدث خطأ أثناء تعديل الكمية");
     }
   }
@@ -536,14 +374,13 @@ export default function ChallengerPage() {
       const result = await res.json();
 
       if (!res.ok) {
-        console.error("DELETE /items failed:", result);
         alert(result.error || "فشل في حذف العنصر");
         return;
       }
 
       setItems((prev) => prev.filter((item) => item.id !== itemId));
     } catch (error) {
-      console.error("deleteItem error:", error);
+      console.error(error);
       alert("حدث خطأ أثناء حذف العنصر");
     }
   }
@@ -556,22 +393,6 @@ export default function ChallengerPage() {
 
       <p style={{ marginBottom: 16, color: "#555" }}>
         هذه الواجهة خاصة بالمُتحدي، وتراعي التقييدات الكلوية والحمولة المشتركة.
-      </p>
-
-      <p style={{ marginBottom: 16 }}>
-        <a
-          href="/renal"
-          style={{ color: "#1a73e8", textDecoration: "none", fontWeight: 600 }}
-        >
-          الدليل الكلوي
-        </a>
-        {" — "}
-        <a
-          href="/restricted"
-          style={{ color: "#b26a00", textDecoration: "none", fontWeight: 600 }}
-        >
-          عناصر مسموحة بقيود
-        </a>
       </p>
 
       {(mealRisk.redAlert || mealRisk.orangeAlert) && (
@@ -591,23 +412,13 @@ export default function ChallengerPage() {
             {mealRisk.redAlert ? "تحذير كلوي مرتفع" : "تنبيه كلوي"}
           </div>
 
-          <div style={{ marginBottom: 8 }}>
-            نقاط الحمولة المشتركة الحالية: <strong>{mealRisk.totalSharedLoad}</strong>
-          </div>
-
-          {mealRisk.riskFoods.length > 0 && (
-            <div style={{ marginBottom: 8 }}>
-              العناصر المساهمة: <strong>{mealRisk.riskFoods.join("، ")}</strong>
-            </div>
+          {mealRisk.messages.length > 0 && (
+            <ul style={{ margin: 0, paddingInlineStart: 20 }}>
+              {mealRisk.messages.map((msg, idx) => (
+                <li key={idx}>{msg}</li>
+              ))}
+            </ul>
           )}
-
-          <ul style={{ margin: 0, paddingInlineStart: 20 }}>
-            {mealRisk.messages.map((msg, idx) => (
-              <li key={idx} style={{ marginBottom: 4 }}>
-                {msg}
-              </li>
-            ))}
-          </ul>
         </div>
       )}
 
@@ -625,7 +436,7 @@ export default function ChallengerPage() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="ابحث: أفوكادو / سردين / لوبيا / لبنة / بطاطس"
+          placeholder="ابحث: لوز / جوز / فول سوداني / أفوكادو / بطاطس"
           style={inputStyle}
         />
 
@@ -666,7 +477,6 @@ export default function ChallengerPage() {
                 <div style={{ fontWeight: 600 }}>{food.name_ar}</div>
                 <div style={{ fontSize: 12, color: "#666" }}>
                   {food.notes || ""}
-                  {food.default_qty_g ? ` — وزن افتراضي: ${food.default_qty_g}غ` : ""}
                 </div>
               </button>
             ))}
@@ -688,7 +498,7 @@ export default function ChallengerPage() {
             style={{
               width: "100%",
               borderCollapse: "collapse",
-              minWidth: 1150,
+              minWidth: 1100,
             }}
           >
             <thead>
@@ -700,7 +510,7 @@ export default function ChallengerPage() {
                 <th style={thStyle}>الدهون</th>
                 <th style={thStyle}>الألياف</th>
                 <th style={thStyle}>الكارب الصافي</th>
-                <th style={thStyle}>التصنيف الكلوي</th>
+                <th style={thStyle}>التصنيف</th>
                 <th style={thStyle}>الحد لكل وجبة</th>
                 <th style={thStyle}>حذف</th>
               </tr>
@@ -708,26 +518,7 @@ export default function ChallengerPage() {
 
             <tbody>
               {items.map((item) => {
-                if (!item.foods) {
-                  return (
-                    <tr key={item.id}>
-                      <td style={tdStyle}>عنصر غير موجود</td>
-                      <td style={tdStyle}>{item.qty_g}</td>
-                      <td style={tdStyle}>-</td>
-                      <td style={tdStyle}>-</td>
-                      <td style={tdStyle}>-</td>
-                      <td style={tdStyle}>-</td>
-                      <td style={tdStyle}>-</td>
-                      <td style={tdStyle}>-</td>
-                      <td style={tdStyle}>-</td>
-                      <td style={tdStyle}>
-                        <button onClick={() => deleteItem(item.id)} style={deleteButtonStyle}>
-                          حذف
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                }
+                if (!item.foods) return null;
 
                 const row = calcRow(item.foods, item.qty_g);
                 const violations = violationsByItem[item.id] || [];
@@ -736,10 +527,6 @@ export default function ChallengerPage() {
                   <tr key={item.id}>
                     <td style={tdStyle}>
                       <div style={{ fontWeight: 600 }}>{item.foods.name_ar}</div>
-                      <div style={{ fontSize: 12, color: "#666" }}>
-                        {item.foods.notes || ""}
-                      </div>
-
                       {item.foods.renal_limit_details ? (
                         <div style={{ fontSize: 12, color: "#8a5a00", marginTop: 4 }}>
                           {item.foods.renal_limit_details}
@@ -787,17 +574,12 @@ export default function ChallengerPage() {
                     <td style={tdStyle}>{row.fat.toFixed(1)}</td>
                     <td style={tdStyle}>{row.fiber.toFixed(1)}</td>
                     <td style={tdStyle}>{row.netCarb.toFixed(1)}</td>
-
-                    <td style={tdStyle}>
-                      <RenalBadge food={item.foods} />
-                    </td>
-
+                    <td style={tdStyle}>{item.foods.renal_group || "—"}</td>
                     <td style={tdStyle}>
                       {item.foods.renal_max_per_meal_g
                         ? `${item.foods.renal_max_per_meal_g}غ`
                         : "—"}
                     </td>
-
                     <td style={tdStyle}>
                       <button onClick={() => deleteItem(item.id)} style={deleteButtonStyle}>
                         حذف
@@ -824,61 +606,6 @@ export default function ChallengerPage() {
         </div>
       )}
     </main>
-  );
-}
-
-function RenalBadge({ food }: { food: Food }) {
-  let label = "غير مصنف";
-  let style: React.CSSProperties = {
-    background: "#f4f4f4",
-    color: "#555",
-    border: "1px solid #ddd",
-  };
-
-  if (food.renal_group === "excellent") {
-    label = "ممتازة";
-    style = {
-      background: "#e8f5e9",
-      color: "#0f9d58",
-      border: "1px solid #b7dfc2",
-    };
-  } else if (food.renal_group === "allowed") {
-    label = "مسموحة";
-    style = {
-      background: "#e8f0fe",
-      color: "#1a73e8",
-      border: "1px solid #bfd3fb",
-    };
-  } else if (food.renal_group === "restricted") {
-    label = "بقيود";
-    style = {
-      background: "#fff7e0",
-      color: "#b26a00",
-      border: "1px solid #f5d48a",
-    };
-  } else if (food.renal_group === "forbidden") {
-    label = "محظورة";
-    style = {
-      background: "#fdecea",
-      color: "#d93025",
-      border: "1px solid #f3b8b2",
-    };
-  }
-
-  return (
-    <span
-      title={food.renal_combo_notes || food.renal_reason || ""}
-      style={{
-        ...style,
-        padding: "6px 10px",
-        borderRadius: 999,
-        fontSize: 12,
-        fontWeight: 700,
-        whiteSpace: "nowrap",
-      }}
-    >
-      {label}
-    </span>
   );
 }
 
