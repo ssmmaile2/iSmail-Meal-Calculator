@@ -684,8 +684,16 @@ export default function ChallengerPage() {
                 return (
                   <tr key={item.id}>
                     <td style={tdStyle}>
-                      <div style={{ fontWeight: 600 }}>{item.foods.name_ar}</div>
-
+                      <a
+  href={`/challenger/food/${item.foods.id}`}
+  style={{
+    fontWeight: 600,
+    color: "#1a73e8",
+    textDecoration: "none",
+  }}
+>
+  {item.foods.name_ar}
+</a>
                       {item.foods.renal_limit_details ? (
                         <div style={{ fontSize: 12, color: "#8a5a00", marginTop: 4 }}>
                           {item.foods.renal_limit_details}
