@@ -26,6 +26,17 @@ export async function POST(
     );
   }
 
+  // اسم العنصر المطلوب إضافته
+  const { data: targetFood, error: targetFoodError } = await supabase
+    .from("foods")
+    .select("id, name_ar")
+    .eq("id", food_id)
+    .single();
+
+  if (targetFoodError) {
+    return NextResponse.json({ error: targetFoodError.message }, { status: 500 });
+  }
+
   // 1) جلب عضوية العنصر المطلوب إضافته في المجموعات
   const { data: targetMemberships, error: targetMembershipsError } = await supabase
     .from("food_group_members")
@@ -75,9 +86,29 @@ export async function POST(
     );
   }
 
-  // 4) جلب عضويات مجموعات العناصر التي استُهلكت سابقًا
+  // 4) جلب أسماء العناصر المستهلكة سابقًا
   const consumedFoodIds = Array.from(new Set((logs ?? []).map((l) => l.food_id)));
 
+  let consumedFoodMap: Record<string, string> = {};
+  if (consumedFoodIds.length > 0) {
+    const { data: consumedFoods, error: consumedFoodsError } = await supabase
+      .from("foods")
+      .select("id, name_ar")
+      .in("id", consumedFoodIds);
+
+    if (consumedFoodsError) {
+      return NextResponse.json(
+        { error: consumedFoodsError.message },
+        { status: 500 }
+      );
+    }
+
+    consumedFoodMap = Object.fromEntries(
+      (consumedFoods ?? []).map((f) => [f.id, f.name_ar])
+    );
+  }
+
+  // 5) جلب عضويات مجموعات العناصر المستهلكة سابقًا
   let consumedGroupRows: Array<{ food_id: string; group_id: string }> = [];
 
   if (consumedFoodIds.length > 0) {
@@ -97,7 +128,7 @@ export async function POST(
     consumedGroupRows = membershipsForConsumed ?? [];
   }
 
-  // 5) فحص وجود منع زمني فعال
+  // 6) فحص وجود منع زمني فعال
   const now = new Date();
 
   for (const rule of timeRules ?? []) {
@@ -111,7 +142,6 @@ export async function POST(
       const consumedAt = new Date(log.consumed_at);
       const daysPassed = diffDays(consumedAt, now);
 
-      // ما زال داخل مدة المنع
       if (daysPassed < 0 || daysPassed >= rule.block_days) continue;
 
       const consumedGroups = consumedGroupRows
@@ -124,18 +154,35 @@ export async function POST(
 
       if (!sourceMatched) continue;
 
+      const blockingFoodName = consumedFoodMap[log.food_id] || "عنصر سابق";
+      const blockingConsumedAt = log.consumed_at;
+
       return NextResponse.json(
         {
           error:
             rule.notes ||
             `هذا العنصر ممنوع مؤقتًا لمدة ${rule.block_days} يوم/أيام بعد استهلاك عنصر متعارض.`,
+          code: "TIME_BLOCKED",
+          target_food: {
+            id: targetFood.id,
+            name_ar: targetFood.name_ar,
+          },
+          blocking_food: {
+            id: log.food_id,
+            name_ar: blockingFoodName,
+            consumed_at: blockingConsumedAt,
+          },
+          rule: {
+            block_days: rule.block_days,
+            notes: rule.notes || null,
+          },
         },
         { status: 400 }
       );
     }
   }
 
-  // 6) إذا لم يوجد منع زمني، أضف العنصر كالمعتاد
+  // 7) إذا لم يوجد منع زمني، أضف العنصر كالمعتاد
   const { data, error } = await supabase
     .from("meal_items")
     .insert([{ meal_id: mealId, food_id, qty_g }])
