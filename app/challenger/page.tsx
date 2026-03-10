@@ -164,6 +164,7 @@ export default function ChallengerPage() {
   const [suggestions, setSuggestions] = useState<Food[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+const [blockingError, setBlockingError] = useState<BlockingError | null>(null);
 
   useEffect(() => {
     async function createMeal() {
