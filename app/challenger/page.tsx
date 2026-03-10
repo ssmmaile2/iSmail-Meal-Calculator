@@ -477,6 +477,64 @@ async function addItem(food: Food) {
         هذه الواجهة خاصة بالسيد رشيد، وتراعي التقييدات الكلوية والحمولة المشتركة.
       </p>
 
+
+{blockingError && (
+  <div
+    style={{
+      marginBottom: 18,
+      padding: 14,
+      borderRadius: 12,
+      border: "1px solid #f3b8b2",
+      background: "#fdecea",
+      color: "#b42318",
+    }}
+  >
+    <div style={{ fontWeight: 700, marginBottom: 8 }}>
+      لا يمكن إضافة هذا العنصر الآن
+    </div>
+
+    <div style={{ marginBottom: 6 }}>
+      <strong>العنصر المطلوب:</strong>{" "}
+      {blockingError.target_food?.name_ar || "—"}
+    </div>
+
+    <div style={{ marginBottom: 6 }}>
+      <strong>سبب المنع:</strong> {blockingError.error}
+    </div>
+
+    {blockingError.blocking_food?.name_ar ? (
+      <div style={{ marginBottom: 6 }}>
+        <strong>العنصر المانع:</strong>{" "}
+        {blockingError.blocking_food.name_ar}
+      </div>
+    ) : null}
+
+    {blockingError.blocking_food?.consumed_at ? (
+      <div style={{ marginBottom: 10 }}>
+        <strong>تاريخ الاستهلاك المانع:</strong>{" "}
+        {new Date(blockingError.blocking_food.consumed_at).toLocaleString()}
+      </div>
+    ) : null}
+
+    {blockingError.blocking_food?.id ? (
+      <a
+        href={`/challenger/food/${blockingError.blocking_food.id}`}
+        style={{
+          display: "inline-block",
+          padding: "10px 14px",
+          borderRadius: 10,
+          background: "#111827",
+          color: "white",
+          textDecoration: "none",
+          fontWeight: 700,
+        }}
+      >
+        فتح صفحة {blockingError.blocking_food.name_ar}
+      </a>
+    ) : null}
+  </div>
+)}
+
       {(mealRisk.redAlert || mealRisk.orangeAlert) && (
         <div
           style={{
