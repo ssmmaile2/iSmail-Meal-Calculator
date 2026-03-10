@@ -93,12 +93,15 @@ export async function GET(
     return NextResponse.json({ error: rulesError.message }, { status: 500 });
   }
 
-  const interactions = (rules ?? [])
+  const rawInteractions = (rules ?? [])
     .filter((rule) => {
       const sourceFood = rule.source_food_id === id;
-      const sourceGroup = !!rule.source_group_id && ownGroupIds.includes(rule.source_group_id);
+      const sourceGroup =
+        !!rule.source_group_id && ownGroupIds.includes(rule.source_group_id);
       const targetFood = rule.target_food_id === id;
-      const targetGroup = !!rule.target_group_id && ownGroupIds.includes(rule.target_group_id);
+      const targetGroup =
+        !!rule.target_group_id && ownGroupIds.includes(rule.target_group_id);
+
       return sourceFood || sourceGroup || targetFood || targetGroup;
     })
     .map((rule) => {
@@ -129,6 +132,18 @@ export async function GET(
         related,
       };
     });
+
+  const interactions = rawInteractions.filter(
+    (item, index, arr) =>
+      index ===
+      arr.findIndex(
+        (x) =>
+          x.related === item.related &&
+          x.rule_type === item.rule_type &&
+          (x.notes || "") === (item.notes || "") &&
+          (x.target_limit_g || null) === (item.target_limit_g || null)
+      )
+  );
 
   const now = new Date();
   const todayIso = now.toISOString().slice(0, 10);
