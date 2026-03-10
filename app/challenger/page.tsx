@@ -373,42 +373,55 @@ const [blockingError, setBlockingError] = useState<BlockingError | null>(null);
     return result;
   }, [items]);
 
-  async function addItem(food: Food) {
-    if (!mealId) return;
+async function addItem(food: Food) {
+  if (!mealId) return;
 
-    const finalQty =
-      food.default_qty_g && Number(food.default_qty_g) > 0
-        ? Number(food.default_qty_g)
-        : qty === "" || Number(qty) <= 0
-        ? 100
-        : Number(qty);
+  const finalQty =
+    food.default_qty_g && Number(food.default_qty_g) > 0
+      ? Number(food.default_qty_g)
+      : qty === "" || Number(qty) <= 0
+      ? 100
+      : Number(qty);
 
-    setAdding(true);
+  setAdding(true);
+  setBlockingError(null);
 
-    try {
-      const res = await fetch(`/api/meals/${mealId}/items`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ food_id: food.id, qty_g: finalQty }),
-      });
+  try {
+    const res = await fetch(`/api/meals/${mealId}/items`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        food_id: food.id,
+        qty_g: finalQty,
+      }),
+    });
 
-      const result = await res.json();
-      if (!res.ok) {
-        alert(result.error || "فشل في إضافة العنصر");
+    const result = await res.json();
+
+    if (!res.ok) {
+      if (result?.code === "TIME_BLOCKED") {
+        setBlockingError(result);
         return;
       }
 
-      await refreshMeal(mealId);
-      setQuery("");
-      setSuggestions([]);
-      setQty(100);
-    } catch (error) {
-      console.error(error);
-      alert("حدث خطأ أثناء الإضافة");
-    } finally {
-      setAdding(false);
+      alert(result.error || "فشل في إضافة العنصر");
+      return;
     }
+
+    await refreshMeal(mealId);
+    setQuery("");
+    setSuggestions([]);
+    setQty(100);
+    setBlockingError(null);
+  } catch (error) {
+    console.error(error);
+    alert("حدث خطأ أثناء الإضافة");
+  } finally {
+    setAdding(false);
   }
+}
 
   async function updateQty(itemId: string, newQty: number) {
     if (!mealId || Number.isNaN(newQty) || newQty < 0) return;
