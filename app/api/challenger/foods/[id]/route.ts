@@ -6,6 +6,10 @@ function daysBetween(a: Date, b: Date) {
   return Math.floor(ms / (1000 * 60 * 60 * 24));
 }
 
+function normalizeText(text: string) {
+  return (text || "").toLowerCase().trim();
+}
+
 export async function GET(
   _req: Request,
   context: { params: Promise<{ id: string }> }
@@ -136,13 +140,7 @@ export async function GET(
   const interactions = rawInteractions.filter(
     (item, index, arr) =>
       index ===
-      arr.findIndex(
-        (x) =>
-          x.related === item.related &&
-          x.rule_type === item.rule_type &&
-          (x.notes || "") === (item.notes || "") &&
-          (x.target_limit_g || null) === (item.target_limit_g || null)
-      )
+      arr.findIndex((x) => normalizeText(x.related) === normalizeText(item.related))
   );
 
   const now = new Date();
