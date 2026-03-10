@@ -13,6 +13,14 @@ type FoodItem = {
   renal_limit_details?: string | null;
   renal_min_gap_days?: number | null;
   renal_max_uses_per_7d?: number | null;
+  time_status?: {
+    available_now: boolean;
+    blocking_food_id?: string;
+    blocking_food_name?: string;
+    consumed_at?: string;
+    note?: string;
+    block_days?: number;
+  };
 };
 
 type GroupInfo = {
@@ -158,6 +166,72 @@ export default function GroupDetailsPage({
                       {food.renal_min_gap_days ? `${food.renal_min_gap_days} يوم` : "—"}
                     </div>
                   </div>
+
+                  {food.time_status?.available_now === false ? (
+                    <div
+                      style={{
+                        marginTop: 12,
+                        padding: 12,
+                        borderRadius: 12,
+                        background: "#fdecea",
+                        border: "1px solid #f3b8b2",
+                        color: "#b42318",
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                        ممنوع مؤقتًا
+                      </div>
+
+                      {food.time_status.note ? (
+                        <div style={{ marginBottom: 6 }}>{food.time_status.note}</div>
+                      ) : null}
+
+                      {food.time_status.blocking_food_name ? (
+                        <div style={{ marginBottom: 6 }}>
+                          <strong>العنصر المانع:</strong>{" "}
+                          {food.time_status.blocking_food_name}
+                        </div>
+                      ) : null}
+
+                      {food.time_status.consumed_at ? (
+                        <div style={{ marginBottom: 10 }}>
+                          <strong>تاريخ الاستهلاك:</strong>{" "}
+                          {new Date(food.time_status.consumed_at).toLocaleString()}
+                        </div>
+                      ) : null}
+
+                      {food.time_status.blocking_food_id ? (
+                        <a
+                          href={`/challenger/food/${food.time_status.blocking_food_id}`}
+                          style={{
+                            display: "inline-block",
+                            padding: "10px 14px",
+                            borderRadius: 10,
+                            background: "#111827",
+                            color: "white",
+                            textDecoration: "none",
+                            fontWeight: 700,
+                          }}
+                        >
+                          فتح صفحة {food.time_status.blocking_food_name || "العنصر المانع"}
+                        </a>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        marginTop: 12,
+                        padding: 12,
+                        borderRadius: 12,
+                        background: "#e8f5e9",
+                        border: "1px solid #b7dfc2",
+                        color: "#0f9d58",
+                        fontWeight: 700,
+                      }}
+                    >
+                      متاح الآن
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
