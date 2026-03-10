@@ -151,6 +151,12 @@ export default function FoodDetailsPage({
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
 
+  const [editingLogId, setEditingLogId] = useState<string | null>(null);
+  const [editQty, setEditQty] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+
   useEffect(() => {
     async function init() {
       const p = await params;
@@ -215,6 +221,81 @@ export default function FoodDetailsPage({
     } catch (error) {
       console.error(error);
       alert("حدث خطأ أثناء تسجيل الاستهلاك");
+    }
+  }
+
+  function startEdit(log: LogRow) {
+    setEditingLogId(log.id);
+    setEditQty(String(log.qty_g));
+    setEditDate(new Date(log.consumed_at).toISOString().slice(0, 16));
+    setEditNotes(log.notes || "");
+  }
+
+  function cancelEdit() {
+    setEditingLogId(null);
+    setEditQty("");
+    setEditDate("");
+    setEditNotes("");
+  }
+
+  async function saveEdit() {
+    if (!editingLogId) return;
+
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/challenger/consumption/${editingLogId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          qty_g: Number(editQty),
+          consumed_at: new Date(editDate).toISOString(),
+          notes: editNotes,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "فشل في تعديل السجل");
+        return;
+      }
+
+      cancelEdit();
+      await loadData(foodId);
+    } catch (error) {
+      console.error(error);
+      alert("حدث خطأ أثناء تعديل السجل");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function deleteLog(logId: string) {
+    const confirmed = window.confirm("هل تريد حذف هذا السجل نهائيًا؟");
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/challenger/consumption/${logId}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "فشل في حذف السجل");
+        return;
+      }
+
+      if (editingLogId === logId) {
+        cancelEdit();
+      }
+
+      await loadData(foodId);
+    } catch (error) {
+      console.error(error);
+      alert("حدث خطأ أثناء حذف السجل");
     }
   }
 
@@ -461,9 +542,72 @@ export default function FoodDetailsPage({
               <div style={{ display: "grid", gap: 10 }}>
                 {logs.map((log) => (
                   <div key={log.id} style={miniCardStyle}>
-                    <div><strong>التاريخ:</strong> {new Date(log.consumed_at).toLocaleString()}</div>
-                    <div><strong>الكمية:</strong> {log.qty_g}غ</div>
-                    {log.notes ? <div><strong>ملاحظة:</strong> {log.notes}</div> : null}
+                    {editingLogId === log.id ? (
+                      <div style={{ display: "grid", gap: 10 }}>
+                        <input
+                          type="number"
+                          value={editQty}
+                          onChange={(e) => setEditQty(e.target.value)}
+                          placeholder="الكمية بالغرام"
+                          style={inputStyle}
+                        />
+                        <input
+                          type="datetime-local"
+                          value={editDate}
+                          onChange={(e) => setEditDate(e.target.value)}
+                          style={inputStyle}
+                        />
+                        <textarea
+                          value={editNotes}
+                          onChange={(e) => setEditNotes(e.target.value)}
+                          placeholder="ملاحظة اختيارية"
+                          style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
+                        />
+
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          <button
+                            onClick={saveEdit}
+                            disabled={savingEdit}
+                            style={actionButtonDark}
+                          >
+                            حفظ التعديل
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            style={actionButtonLight}
+                          >
+                            إلغاء
+                          </button>
+                          <button
+                            onClick={() => deleteLog(log.id)}
+                            style={actionButtonDanger}
+                          >
+                            حذف السجل
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div><strong>التاريخ:</strong> {new Date(log.consumed_at).toLocaleString()}</div>
+                        <div><strong>الكمية:</strong> {log.qty_g}غ</div>
+                        {log.notes ? <div><strong>ملاحظة:</strong> {log.notes}</div> : null}
+
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                          <button
+                            onClick={() => startEdit(log)}
+                            style={actionButtonLight}
+                          >
+                            تعديل
+                          </button>
+                          <button
+                            onClick={() => deleteLog(log.id)}
+                            style={actionButtonDanger}
+                          >
+                            حذف
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
@@ -503,6 +647,36 @@ const saveButtonStyle: React.CSSProperties = {
   border: "1px solid #ddd",
   background: "#111827",
   color: "white",
+  cursor: "pointer",
+  fontWeight: 600,
+};
+
+const actionButtonDark: React.CSSProperties = {
+  padding: "10px 14px",
+  borderRadius: 10,
+  border: "1px solid #111827",
+  background: "#111827",
+  color: "white",
+  cursor: "pointer",
+  fontWeight: 600,
+};
+
+const actionButtonLight: React.CSSProperties = {
+  padding: "10px 14px",
+  borderRadius: 10,
+  border: "1px solid #ddd",
+  background: "white",
+  color: "#111",
+  cursor: "pointer",
+  fontWeight: 600,
+};
+
+const actionButtonDanger: React.CSSProperties = {
+  padding: "10px 14px",
+  borderRadius: 10,
+  border: "1px solid #ef4444",
+  background: "#fff5f5",
+  color: "#b91c1c",
   cursor: "pointer",
   fontWeight: 600,
 };
