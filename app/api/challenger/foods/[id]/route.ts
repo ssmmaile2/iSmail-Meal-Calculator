@@ -96,12 +96,9 @@ export async function GET(
   const interactions = (rules ?? [])
     .filter((rule) => {
       const sourceFood = rule.source_food_id === id;
-      const sourceGroup =
-        !!rule.source_group_id && ownGroupIds.includes(rule.source_group_id);
+      const sourceGroup = !!rule.source_group_id && ownGroupIds.includes(rule.source_group_id);
       const targetFood = rule.target_food_id === id;
-      const targetGroup =
-        !!rule.target_group_id && ownGroupIds.includes(rule.target_group_id);
-
+      const targetGroup = !!rule.target_group_id && ownGroupIds.includes(rule.target_group_id);
       return sourceFood || sourceGroup || targetFood || targetGroup;
     })
     .map((rule) => {
@@ -135,7 +132,6 @@ export async function GET(
 
   const now = new Date();
   const todayIso = now.toISOString().slice(0, 10);
-
   const logsList = logs ?? [];
   const latest = logsList.length > 0 ? logsList[0] : null;
 
@@ -156,14 +152,9 @@ export async function GET(
   const maxPer7d = food.renal_max_uses_per_7d ?? food.renal_max_times_per_week ?? null;
   const maxPerDay = food.renal_max_times_per_day ?? null;
 
-  const blockedByGap =
-    minGap !== null && gapDaysPassed !== null && gapDaysPassed < minGap;
-
-  const blockedByDay =
-    maxPerDay !== null && usedToday.length >= maxPerDay;
-
-  const blockedBy7d =
-    maxPer7d !== null && since7d.length >= maxPer7d;
+  const blockedByGap = minGap !== null && gapDaysPassed !== null && gapDaysPassed < minGap;
+  const blockedByDay = maxPerDay !== null && usedToday.length >= maxPerDay;
+  const blockedBy7d = maxPer7d !== null && since7d.length >= maxPer7d;
 
   return NextResponse.json({
     food,
