@@ -238,45 +238,83 @@ export default function FoodDetailsPage({
     };
   }, [status]);
 
+  const uniqueInteractions = useMemo(() => {
+    return interactions.filter(
+      (item, index, arr) =>
+        index ===
+        arr.findIndex(
+          (x) => normalizeArabic(x.related) === normalizeArabic(item.related)
+        )
+    );
+  }, [interactions]);
+
   const fallbackGroups = useMemo(() => {
     if (!food) return [];
 
     const n = normalizeArabic(food.name_ar);
+    const groups: Array<{ title: string; items: string[]; note: string }> = [];
 
-    const groups: Array<{ title: string; items: string[] }> = [];
+    const isNut = NUTS_CONFLICT_NAMES.map(normalizeArabic).includes(n);
+    const isLegume = DENSE_LEGUMES_CONFLICT_NAMES.map(normalizeArabic).includes(n);
+    const isDairy = DENSE_DAIRY_CONFLICT_NAMES.map(normalizeArabic).includes(n);
+    const isAnimalProtein = DENSE_ANIMAL_PROTEIN_CONFLICT_NAMES.map(normalizeArabic).includes(n);
+    const isHighPotFruit = HIGH_POTASSIUM_FRUITS_CONFLICT_NAMES.map(normalizeArabic).includes(n);
 
-    if (NUTS_CONFLICT_NAMES.map(normalizeArabic).includes(n)) {
+    if (isNut) {
       groups.push({
         title: "مجموعة المكسرات العالية الفوسفور",
         items: NUTS_CONFLICT_NAMES.filter((x) => normalizeArabic(x) !== n),
+        note: "لا يُفضّل جمعه مع مكسرات أخرى من نفس المجموعة في نفس اليوم.",
+      });
+
+      groups.push({
+        title: "مجموعة البقول المركزة",
+        items: DENSE_LEGUMES_CONFLICT_NAMES,
+        note: "منطق احترازي: لا يُفضّل جمع المكسرات العالية الفوسفور مع البقول المركزة في نفس اليوم.",
+      });
+
+      groups.push({
+        title: "مجموعة الألبان المركزة",
+        items: DENSE_DAIRY_CONFLICT_NAMES,
+        note: "منطق احترازي: لا يُفضّل جمع المكسرات العالية الفوسفور مع الألبان المركزة في نفس اليوم.",
+      });
+
+      groups.push({
+        title: "مجموعة البروتين الحيواني المركز",
+        items: DENSE_ANIMAL_PROTEIN_CONFLICT_NAMES,
+        note: "منطق احترازي: لا يُفضّل جمع المكسرات العالية الفوسفور مع البروتين الحيواني المركز في نفس اليوم.",
       });
     }
 
-    if (DENSE_LEGUMES_CONFLICT_NAMES.map(normalizeArabic).includes(n)) {
+    if (isLegume) {
       groups.push({
         title: "مجموعة البقول المركزة",
         items: DENSE_LEGUMES_CONFLICT_NAMES.filter((x) => normalizeArabic(x) !== n),
+        note: "لا يُفضّل جمعه مع بقول مركزة أخرى في نفس اليوم.",
       });
     }
 
-    if (DENSE_DAIRY_CONFLICT_NAMES.map(normalizeArabic).includes(n)) {
+    if (isDairy) {
       groups.push({
         title: "مجموعة الألبان المركزة",
         items: DENSE_DAIRY_CONFLICT_NAMES.filter((x) => normalizeArabic(x) !== n),
+        note: "لا يُفضّل جمعه مع ألبان مركزة أخرى في نفس اليوم.",
       });
     }
 
-    if (DENSE_ANIMAL_PROTEIN_CONFLICT_NAMES.map(normalizeArabic).includes(n)) {
+    if (isAnimalProtein) {
       groups.push({
         title: "مجموعة البروتين الحيواني المركز",
         items: DENSE_ANIMAL_PROTEIN_CONFLICT_NAMES.filter((x) => normalizeArabic(x) !== n),
+        note: "لا يُفضّل جمعه مع بروتين حيواني مركز آخر في نفس اليوم.",
       });
     }
 
-    if (HIGH_POTASSIUM_FRUITS_CONFLICT_NAMES.map(normalizeArabic).includes(n)) {
+    if (isHighPotFruit) {
       groups.push({
         title: "مجموعة الفواكه الأعلى بوتاسيوم",
         items: HIGH_POTASSIUM_FRUITS_CONFLICT_NAMES.filter((x) => normalizeArabic(x) !== n),
+        note: "لا يُفضّل جمعه مع فواكه أخرى أعلى بوتاسيوم في نفس اليوم.",
       });
     }
 
@@ -354,14 +392,18 @@ export default function FoodDetailsPage({
           <div style={cardStyle}>
             <h2 style={{ fontSize: 20, marginBottom: 12 }}>العناصر/المجموعات التي لا يجتمع معها</h2>
 
-            {interactions.length === 0 && fallbackGroups.length === 0 ? (
+            {uniqueInteractions.length === 0 && fallbackGroups.length === 0 ? (
               <p>لا توجد قواعد مسجلة بعد.</p>
             ) : (
               <div style={{ display: "grid", gap: 8 }}>
-                {interactions.map((it) => (
+                {uniqueInteractions.map((it) => (
                   <div key={it.id} style={miniCardStyle}>
                     <div style={{ fontWeight: 600 }}>{it.related}</div>
-                    {it.notes ? <div style={{ fontSize: 13, color: "#666", marginTop: 4 }}>{it.notes}</div> : null}
+                    {it.notes ? (
+                      <div style={{ fontSize: 13, color: "#666", marginTop: 4 }}>
+                        {it.notes}
+                      </div>
+                    ) : null}
                     {it.target_limit_g ? (
                       <div style={{ fontSize: 13, color: "#8a5a00", marginTop: 4 }}>
                         الحد المعدل: {it.target_limit_g}غ
@@ -373,8 +415,8 @@ export default function FoodDetailsPage({
                 {fallbackGroups.map((group) => (
                   <div key={group.title} style={miniCardStyle}>
                     <div style={{ fontWeight: 700, marginBottom: 6 }}>{group.title}</div>
-                    <div style={{ fontSize: 13, color: "#666", marginBottom: 6 }}>
-                      منطق احترازي: يفضّل عدم جمع هذا العنصر مع عناصر هذه المجموعة في نفس اليوم.
+                    <div style={{ fontSize: 13, color: "#666", marginBottom: 8 }}>
+                      {group.note}
                     </div>
                     <div>{group.items.join("، ")}</div>
                   </div>
