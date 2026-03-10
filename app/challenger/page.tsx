@@ -640,6 +640,22 @@ export default function ChallengerPage() {
           </table>
         </div>
       )}
+    <div style={{ marginTop: 24, display: "flex", justifyContent: "center" }}>
+  <a
+    href="/challenger/groups"
+    style={{
+      display: "inline-block",
+      padding: "12px 18px",
+      borderRadius: 12,
+      background: "#111827",
+      color: "white",
+      textDecoration: "none",
+      fontWeight: 700,
+    }}
+  >
+    استعراض المجموعات ذات التقييد
+  </a>
+</div>
     </main>
   );
 }
