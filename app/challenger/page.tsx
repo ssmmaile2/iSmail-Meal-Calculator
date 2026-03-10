@@ -2,25 +2,6 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 
-type BlockingError = {
-  error: string;
-  code?: string;
-  target_food?: {
-    id: string;
-    name_ar: string;
-  };
-  blocking_food?: {
-    id: string;
-    name_ar: string;
-    consumed_at: string;
-  };
-  rule?: {
-    block_days: number;
-    notes?: string | null;
-  };
-};
-
-
 type Food = {
   id: string;
   name_ar: string;
@@ -62,6 +43,24 @@ type MealRiskAnalysis = {
   orangeAlert: boolean;
   riskFoods: string[];
   messages: string[];
+};
+
+type BlockingError = {
+  error: string;
+  code?: string;
+  target_food?: {
+    id: string;
+    name_ar: string;
+  };
+  blocking_food?: {
+    id: string;
+    name_ar: string;
+    consumed_at: string;
+  };
+  rule?: {
+    block_days: number;
+    notes?: string | null;
+  };
 };
 
 const NUTS_CONFLICT_NAMES = [
@@ -164,7 +163,9 @@ export default function ChallengerPage() {
   const [suggestions, setSuggestions] = useState<Food[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
-const [blockingError, setBlockingError] = useState<BlockingError | null>(null);
+  const [blockingError, setBlockingError] = useState<BlockingError | null>(null);
+  const [mealNotes, setMealNotes] = useState("");
+  const [savingMeal, setSavingMeal] = useState(false);
 
   useEffect(() => {
     async function createMeal() {
@@ -365,63 +366,75 @@ const [blockingError, setBlockingError] = useState<BlockingError | null>(null);
     }
 
     addGroupConflict(NUTS_CONFLICT_NAMES, (others) => `لا ينبغي جمع هذا العنصر مع: ${others.join("، ")}`);
-    addGroupConflict(DENSE_LEGUMES_CONFLICT_NAMES, (others) => `لا ينبغي جمع هذا العنصر مع بقول مركزة أخرى في نفس اليوم: ${others.join("، ")}`);
-    addGroupConflict(DENSE_DAIRY_CONFLICT_NAMES, (others) => `لا ينبغي جمع هذا العنصر مع ألبان مركزة أخرى في نفس اليوم: ${others.join("، ")}`);
-    addGroupConflict(DENSE_ANIMAL_PROTEIN_CONFLICT_NAMES, (others) => `لا ينبغي جمع هذا العنصر مع بروتين حيواني مركز آخر في نفس اليوم: ${others.join("، ")}`);
-    addGroupConflict(HIGH_POTASSIUM_FRUITS_CONFLICT_NAMES, (others) => `لا ينبغي جمع هذا العنصر مع فواكه أخرى أعلى بوتاسيوم في نفس اليوم: ${others.join("، ")}`);
+    addGroupConflict(
+      DENSE_LEGUMES_CONFLICT_NAMES,
+      (others) => `لا ينبغي جمع هذا العنصر مع بقول مركزة أخرى في نفس اليوم: ${others.join("، ")}`
+    );
+    addGroupConflict(
+      DENSE_DAIRY_CONFLICT_NAMES,
+      (others) => `لا ينبغي جمع هذا العنصر مع ألبان مركزة أخرى في نفس اليوم: ${others.join("، ")}`
+    );
+    addGroupConflict(
+      DENSE_ANIMAL_PROTEIN_CONFLICT_NAMES,
+      (others) => `لا ينبغي جمع هذا العنصر مع بروتين حيواني مركز آخر في نفس اليوم: ${others.join("، ")}`
+    );
+    addGroupConflict(
+      HIGH_POTASSIUM_FRUITS_CONFLICT_NAMES,
+      (others) => `لا ينبغي جمع هذا العنصر مع فواكه أخرى أعلى بوتاسيوم في نفس اليوم: ${others.join("، ")}`
+    );
 
     return result;
   }, [items]);
 
-async function addItem(food: Food) {
-  if (!mealId) return;
+  async function addItem(food: Food) {
+    if (!mealId) return;
 
-  const finalQty =
-    food.default_qty_g && Number(food.default_qty_g) > 0
-      ? Number(food.default_qty_g)
-      : qty === "" || Number(qty) <= 0
-      ? 100
-      : Number(qty);
+    const finalQty =
+      food.default_qty_g && Number(food.default_qty_g) > 0
+        ? Number(food.default_qty_g)
+        : qty === "" || Number(qty) <= 0
+        ? 100
+        : Number(qty);
 
-  setAdding(true);
-  setBlockingError(null);
+    setAdding(true);
+    setBlockingError(null);
 
-  try {
-    const res = await fetch(`/api/meals/${mealId}/items`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        food_id: food.id,
-        qty_g: finalQty,
-      }),
-    });
+    try {
+      const res = await fetch(`/api/meals/${mealId}/items`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          food_id: food.id,
+          qty_g: finalQty,
+        }),
+      });
 
-    const result = await res.json();
+      const result = await res.json();
 
-    if (!res.ok) {
-      if (result?.code === "TIME_BLOCKED") {
-        setBlockingError(result);
+      if (!res.ok) {
+        if (result?.code === "TIME_BLOCKED") {
+          setBlockingError(result);
+          return;
+        }
+
+        alert(result.error || "فشل في إضافة العنصر");
         return;
       }
 
-      alert(result.error || "فشل في إضافة العنصر");
-      return;
+      await refreshMeal(mealId);
+      setQuery("");
+      setSuggestions([]);
+      setQty(100);
+      setBlockingError(null);
+    } catch (error) {
+      console.error(error);
+      alert("حدث خطأ أثناء الإضافة");
+    } finally {
+      setAdding(false);
     }
-
-    await refreshMeal(mealId);
-    setQuery("");
-    setSuggestions([]);
-    setQty(100);
-    setBlockingError(null);
-  } catch (error) {
-    console.error(error);
-    alert("حدث خطأ أثناء الإضافة");
-  } finally {
-    setAdding(false);
   }
-}
 
   async function updateQty(itemId: string, newQty: number) {
     if (!mealId || Number.isNaN(newQty) || newQty < 0) return;
@@ -469,6 +482,39 @@ async function addItem(food: Food) {
     }
   }
 
+  async function saveCurrentMeal() {
+    if (!mealId) return;
+
+    setSavingMeal(true);
+    try {
+      const res = await fetch("/api/challenger/meal-history", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          meal_id: mealId,
+          notes: mealNotes,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "فشل في حفظ الوجبة");
+        return;
+      }
+
+      setMealNotes("");
+      alert("تم حفظ الوجبة في السجل بنجاح");
+    } catch (error) {
+      console.error(error);
+      alert("حدث خطأ أثناء حفظ الوجبة");
+    } finally {
+      setSavingMeal(false);
+    }
+  }
+
   return (
     <main style={{ maxWidth: 1200, margin: "0 auto", padding: 16 }}>
       <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>حاسبة السيد رشيد</h1>
@@ -477,63 +523,62 @@ async function addItem(food: Food) {
         هذه الواجهة خاصة بالسيد رشيد، وتراعي التقييدات الكلوية والحمولة المشتركة.
       </p>
 
+      {blockingError && (
+        <div
+          style={{
+            marginBottom: 18,
+            padding: 14,
+            borderRadius: 12,
+            border: "1px solid #f3b8b2",
+            background: "#fdecea",
+            color: "#b42318",
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>
+            لا يمكن إضافة هذا العنصر الآن
+          </div>
 
-{blockingError && (
-  <div
-    style={{
-      marginBottom: 18,
-      padding: 14,
-      borderRadius: 12,
-      border: "1px solid #f3b8b2",
-      background: "#fdecea",
-      color: "#b42318",
-    }}
-  >
-    <div style={{ fontWeight: 700, marginBottom: 8 }}>
-      لا يمكن إضافة هذا العنصر الآن
-    </div>
+          <div style={{ marginBottom: 6 }}>
+            <strong>العنصر المطلوب:</strong>{" "}
+            {blockingError.target_food?.name_ar || "—"}
+          </div>
 
-    <div style={{ marginBottom: 6 }}>
-      <strong>العنصر المطلوب:</strong>{" "}
-      {blockingError.target_food?.name_ar || "—"}
-    </div>
+          <div style={{ marginBottom: 6 }}>
+            <strong>سبب المنع:</strong> {blockingError.error}
+          </div>
 
-    <div style={{ marginBottom: 6 }}>
-      <strong>سبب المنع:</strong> {blockingError.error}
-    </div>
+          {blockingError.blocking_food?.name_ar ? (
+            <div style={{ marginBottom: 6 }}>
+              <strong>العنصر المانع:</strong>{" "}
+              {blockingError.blocking_food.name_ar}
+            </div>
+          ) : null}
 
-    {blockingError.blocking_food?.name_ar ? (
-      <div style={{ marginBottom: 6 }}>
-        <strong>العنصر المانع:</strong>{" "}
-        {blockingError.blocking_food.name_ar}
-      </div>
-    ) : null}
+          {blockingError.blocking_food?.consumed_at ? (
+            <div style={{ marginBottom: 10 }}>
+              <strong>تاريخ الاستهلاك المانع:</strong>{" "}
+              {new Date(blockingError.blocking_food.consumed_at).toLocaleString()}
+            </div>
+          ) : null}
 
-    {blockingError.blocking_food?.consumed_at ? (
-      <div style={{ marginBottom: 10 }}>
-        <strong>تاريخ الاستهلاك المانع:</strong>{" "}
-        {new Date(blockingError.blocking_food.consumed_at).toLocaleString()}
-      </div>
-    ) : null}
-
-    {blockingError.blocking_food?.id ? (
-      <a
-        href={`/challenger/food/${blockingError.blocking_food.id}`}
-        style={{
-          display: "inline-block",
-          padding: "10px 14px",
-          borderRadius: 10,
-          background: "#111827",
-          color: "white",
-          textDecoration: "none",
-          fontWeight: 700,
-        }}
-      >
-        فتح صفحة {blockingError.blocking_food.name_ar}
-      </a>
-    ) : null}
-  </div>
-)}
+          {blockingError.blocking_food?.id ? (
+            <a
+              href={`/challenger/food/${blockingError.blocking_food.id}`}
+              style={{
+                display: "inline-block",
+                padding: "10px 14px",
+                borderRadius: 10,
+                background: "#111827",
+                color: "white",
+                textDecoration: "none",
+                fontWeight: 700,
+              }}
+            >
+              فتح صفحة {blockingError.blocking_food.name_ar}
+            </a>
+          ) : null}
+        </div>
+      )}
 
       {(mealRisk.redAlert || mealRisk.orangeAlert) && (
         <div
@@ -731,22 +776,87 @@ async function addItem(food: Food) {
           </table>
         </div>
       )}
-    <div style={{ marginTop: 24, display: "flex", justifyContent: "center" }}>
-  <a
-    href="/challenger/groups"
-    style={{
-      display: "inline-block",
-      padding: "12px 18px",
-      borderRadius: 12,
-      background: "#111827",
-      color: "white",
-      textDecoration: "none",
-      fontWeight: 700,
-    }}
-  >
-    استعراض المجموعات ذات التقييد
-  </a>
-</div>
+
+      <div
+        style={{
+          marginTop: 20,
+          border: "1px solid #e5e5e5",
+          borderRadius: 14,
+          padding: 16,
+          background: "white",
+        }}
+      >
+        <div style={{ marginBottom: 10, fontWeight: 700 }}>
+          حفظ الوجبة في السجل
+        </div>
+
+        <textarea
+          value={mealNotes}
+          onChange={(e) => setMealNotes(e.target.value)}
+          placeholder="ملاحظة اختيارية حول الوجبة"
+          style={{
+            width: "100%",
+            minHeight: 90,
+            resize: "vertical",
+            padding: 12,
+            border: "1px solid #ddd",
+            borderRadius: 10,
+            fontSize: 14,
+            marginBottom: 12,
+          }}
+        />
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            onClick={saveCurrentMeal}
+            disabled={savingMeal}
+            style={{
+              padding: "12px 16px",
+              borderRadius: 10,
+              border: "1px solid #111827",
+              background: "#111827",
+              color: "white",
+              cursor: "pointer",
+              fontWeight: 700,
+            }}
+          >
+            {savingMeal ? "جاري الحفظ..." : "حفظ الوجبة"}
+          </button>
+
+          <a
+            href="/challenger/meal-history"
+            style={{
+              display: "inline-block",
+              padding: "12px 16px",
+              borderRadius: 10,
+              border: "1px solid #ddd",
+              background: "white",
+              color: "#111",
+              textDecoration: "none",
+              fontWeight: 700,
+            }}
+          >
+            الاطلاع على سجل الوجبات
+          </a>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 24, display: "flex", justifyContent: "center" }}>
+        <a
+          href="/challenger/groups"
+          style={{
+            display: "inline-block",
+            padding: "12px 18px",
+            borderRadius: 12,
+            background: "#111827",
+            color: "white",
+            textDecoration: "none",
+            fontWeight: 700,
+          }}
+        >
+          استعراض المجموعات ذات التقييد
+        </a>
+      </div>
     </main>
   );
 }
