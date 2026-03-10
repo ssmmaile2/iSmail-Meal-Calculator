@@ -129,6 +129,14 @@ function normalizeArabic(text: string) {
     .replace(/\s+/g, " ");
 }
 
+function renalGroupLabel(value?: string | null) {
+  if (value === "excellent") return "ممتاز";
+  if (value === "allowed") return "مسموح";
+  if (value === "restricted") return "مسموح بشروط";
+  if (value === "forbidden") return "محظور";
+  return "—";
+}
+
 export default function ChallengerPage() {
   const [mealId, setMealId] = useState<string | null>(null);
   const [items, setItems] = useState<MealItem[]>([]);
@@ -316,7 +324,7 @@ export default function ChallengerPage() {
         addViolation(item.id, `تم تجاوز الحد المسموح لكل وجبة: ${max}غ`);
       }
       if (item.foods.renal_group === "forbidden") {
-        addViolation(item.id, "هذا العنصر محظور على المتحدي.");
+        addViolation(item.id, "هذا العنصر محظور على السيد رشيد.");
       }
     }
 
@@ -430,10 +438,10 @@ export default function ChallengerPage() {
 
   return (
     <main style={{ maxWidth: 1200, margin: "0 auto", padding: 16 }}>
-      <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>حاسبة المُتحدي</h1>
+      <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>حاسبة السيد رشيد</h1>
 
       <p style={{ marginBottom: 16, color: "#555" }}>
-        هذه الواجهة خاصة بالمُتحدي، وتراعي التقييدات الكلوية والحمولة المشتركة.
+        هذه الواجهة خاصة بالسيد رشيد، وتراعي التقييدات الكلوية والحمولة المشتركة.
       </p>
 
       {(mealRisk.redAlert || mealRisk.orangeAlert) && (
@@ -603,7 +611,7 @@ export default function ChallengerPage() {
                     <td style={tdStyle}>{row.fat.toFixed(1)}</td>
                     <td style={tdStyle}>{row.fiber.toFixed(1)}</td>
                     <td style={tdStyle}>{row.netCarb.toFixed(1)}</td>
-                    <td style={tdStyle}>{item.foods.renal_group || "—"}</td>
+                    <td style={tdStyle}>{renalGroupLabel(item.foods.renal_group)}</td>
                     <td style={tdStyle}>
                       {item.foods.renal_max_per_meal_g ? `${item.foods.renal_max_per_meal_g}غ` : "—"}
                     </td>
