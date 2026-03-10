@@ -44,6 +44,98 @@ type StatusInfo = {
   can_consume_now: boolean;
 };
 
+function renalGroupLabel(value?: string | null) {
+  if (value === "excellent") return "ممتاز";
+  if (value === "allowed") return "مسموح";
+  if (value === "restricted") return "مسموح بشروط";
+  if (value === "forbidden") return "محظور";
+  return "—";
+}
+
+function normalizeArabic(text: string) {
+  return (text || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي")
+    .replace(/ؤ/g, "و")
+    .replace(/ئ/g, "ي")
+    .replace(/[\u064B-\u065F\u0670]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+const NUTS_CONFLICT_NAMES = [
+  "لوز",
+  "جوز",
+  "فول سوداني",
+  "كاجو",
+  "فستق",
+  "بندق",
+  "جوز البرازيل",
+];
+
+const DENSE_LEGUMES_CONFLICT_NAMES = [
+  "عدس جاف",
+  "حمص جاف",
+  "فول مجفف",
+  "فاصوليا بيضاء جافة",
+  "فاصوليا حمراء جافة",
+  "لوبيا جافة",
+  "ترمس جاف",
+  "بازلاء جافة",
+  "طبق العدس الخاص بمسافرنا",
+  "لوبيّة مسافرنا",
+  "ترمس مسافرنا",
+  "بيصارة البازلاء الخاصة",
+  "بيصارة الفول الخاصة",
+];
+
+const DENSE_DAIRY_CONFLICT_NAMES = [
+  "لبنة",
+  "زبادي طبيعي كامل",
+  "زبادي منزوع الدسم",
+  "لبن رائب",
+  "حليب كامل الدسم (تجاري)",
+  "حليب نصف دسم",
+  "حليب منزوع الدسم",
+  "حليب بقري بلدي",
+  "حليب إبل كامل الدسم",
+  "جبن طري",
+  "جبن شيدر",
+  "جبن موزاريلا",
+  "جبن قريش",
+];
+
+const DENSE_ANIMAL_PROTEIN_CONFLICT_NAMES = [
+  "بيض دجاج",
+  "بيض ديك رومي",
+  "لحم بقر",
+  "لحم غنم",
+  "لحم ماعز",
+  "دجاج",
+  "دجاج بلدي",
+  "أرنب",
+  "لحم إبل (هبرة)",
+  "لحم الديك الرومي",
+  "لحم الدجاج الحبشي",
+  "كبد الإبل",
+  "قلب الإبل",
+  "رئة الإبل",
+  "كرشة الإبل",
+];
+
+const HIGH_POTASSIUM_FRUITS_CONFLICT_NAMES = [
+  "أفوكادو",
+  "افوكادو",
+  "موز",
+  "كيوي",
+  "رمان",
+  "تمر",
+  "تين",
+  "برقوق مجفف",
+];
+
 export default function FoodDetailsPage({
   params,
 }: {
@@ -146,6 +238,51 @@ export default function FoodDetailsPage({
     };
   }, [status]);
 
+  const fallbackGroups = useMemo(() => {
+    if (!food) return [];
+
+    const n = normalizeArabic(food.name_ar);
+
+    const groups: Array<{ title: string; items: string[] }> = [];
+
+    if (NUTS_CONFLICT_NAMES.map(normalizeArabic).includes(n)) {
+      groups.push({
+        title: "مجموعة المكسرات العالية الفوسفور",
+        items: NUTS_CONFLICT_NAMES.filter((x) => normalizeArabic(x) !== n),
+      });
+    }
+
+    if (DENSE_LEGUMES_CONFLICT_NAMES.map(normalizeArabic).includes(n)) {
+      groups.push({
+        title: "مجموعة البقول المركزة",
+        items: DENSE_LEGUMES_CONFLICT_NAMES.filter((x) => normalizeArabic(x) !== n),
+      });
+    }
+
+    if (DENSE_DAIRY_CONFLICT_NAMES.map(normalizeArabic).includes(n)) {
+      groups.push({
+        title: "مجموعة الألبان المركزة",
+        items: DENSE_DAIRY_CONFLICT_NAMES.filter((x) => normalizeArabic(x) !== n),
+      });
+    }
+
+    if (DENSE_ANIMAL_PROTEIN_CONFLICT_NAMES.map(normalizeArabic).includes(n)) {
+      groups.push({
+        title: "مجموعة البروتين الحيواني المركز",
+        items: DENSE_ANIMAL_PROTEIN_CONFLICT_NAMES.filter((x) => normalizeArabic(x) !== n),
+      });
+    }
+
+    if (HIGH_POTASSIUM_FRUITS_CONFLICT_NAMES.map(normalizeArabic).includes(n)) {
+      groups.push({
+        title: "مجموعة الفواكه الأعلى بوتاسيوم",
+        items: HIGH_POTASSIUM_FRUITS_CONFLICT_NAMES.filter((x) => normalizeArabic(x) !== n),
+      });
+    }
+
+    return groups;
+  }, [food]);
+
   return (
     <main style={{ maxWidth: 1000, margin: "0 auto", padding: 16 }}>
       <p style={{ marginBottom: 12 }}>
@@ -153,7 +290,7 @@ export default function FoodDetailsPage({
           href="/challenger"
           style={{ color: "#1a73e8", textDecoration: "none", fontWeight: 600 }}
         >
-          العودة إلى صفحة المتحدي
+          العودة إلى صفحة السيد رشيد
         </a>
       </p>
 
@@ -168,9 +305,15 @@ export default function FoodDetailsPage({
           </h1>
 
           <div style={cardStyle}>
-            <div style={{ marginBottom: 8 }}><strong>التصنيف:</strong> {food.renal_group || "—"}</div>
-            <div style={{ marginBottom: 8 }}><strong>سبب التقييد:</strong> {food.renal_reason || "—"}</div>
-            <div style={{ marginBottom: 8 }}><strong>تفاصيل التقييد:</strong> {food.renal_limit_details || "—"}</div>
+            <div style={{ marginBottom: 8 }}>
+              <strong>التصنيف:</strong> {renalGroupLabel(food.renal_group)}
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <strong>سبب التقييد:</strong> {food.renal_reason || "—"}
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <strong>تفاصيل التقييد:</strong> {food.renal_limit_details || "—"}
+            </div>
             <div style={{ marginBottom: 8 }}>
               <strong>الحد لكل وجبة:</strong> {food.renal_max_per_meal_g ? `${food.renal_max_per_meal_g}غ` : "—"}
             </div>
@@ -210,7 +353,8 @@ export default function FoodDetailsPage({
 
           <div style={cardStyle}>
             <h2 style={{ fontSize: 20, marginBottom: 12 }}>العناصر/المجموعات التي لا يجتمع معها</h2>
-            {interactions.length === 0 ? (
+
+            {interactions.length === 0 && fallbackGroups.length === 0 ? (
               <p>لا توجد قواعد مسجلة بعد.</p>
             ) : (
               <div style={{ display: "grid", gap: 8 }}>
@@ -223,6 +367,16 @@ export default function FoodDetailsPage({
                         الحد المعدل: {it.target_limit_g}غ
                       </div>
                     ) : null}
+                  </div>
+                ))}
+
+                {fallbackGroups.map((group) => (
+                  <div key={group.title} style={miniCardStyle}>
+                    <div style={{ fontWeight: 700, marginBottom: 6 }}>{group.title}</div>
+                    <div style={{ fontSize: 13, color: "#666", marginBottom: 6 }}>
+                      منطق احترازي: يفضّل عدم جمع هذا العنصر مع عناصر هذه المجموعة في نفس اليوم.
+                    </div>
+                    <div>{group.items.join("، ")}</div>
                   </div>
                 ))}
               </div>
