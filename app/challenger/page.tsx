@@ -2,6 +2,25 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 
+type BlockingError = {
+  error: string;
+  code?: string;
+  target_food?: {
+    id: string;
+    name_ar: string;
+  };
+  blocking_food?: {
+    id: string;
+    name_ar: string;
+    consumed_at: string;
+  };
+  rule?: {
+    block_days: number;
+    notes?: string | null;
+  };
+};
+
+
 type Food = {
   id: string;
   name_ar: string;
