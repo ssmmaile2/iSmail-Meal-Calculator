@@ -120,4 +120,122 @@ function normalizeArabic(text: string) {
   return (text || "")
     .toLowerCase()
     .trim()
-    .replace(/[أإآ]/
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي")
+    .replace(/ؤ/g, "و")
+    .replace(/ئ/g, "ي")
+    .replace(/[\u064B-\u065F\u0670]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+export default function ChallengerPage() {
+  const [mealId, setMealId] = useState<string | null>(null);
+  const [items, setItems] = useState<MealItem[]>([]);
+  const [query, setQuery] = useState("");
+  const [qty, setQty] = useState<number | "">(100);
+  const [suggestions, setSuggestions] = useState<Food[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+
+  useEffect(() => {
+    async function createMeal() {
+      try {
+        const res = await fetch("/api/meals", { method: "POST" });
+        const meal = await res.json();
+
+        if (!res.ok) {
+          alert(meal.error || "فشل في إنشاء الوجبة");
+          setLoading(false);
+          return;
+        }
+
+        setMealId(meal.id);
+        await refreshMeal(meal.id);
+      } catch (error) {
+        console.error(error);
+        alert("حدث خطأ أثناء إنشاء الوجبة");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    createMeal();
+  }, []);
+
+  useEffect(() => {
+    if (!query.trim()) {
+      setSuggestions([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/foods?query=${encodeURIComponent(query)}`);
+        const data = await res.json();
+
+        if (!res.ok) return;
+        setSuggestions(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error(error);
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  async function refreshMeal(id: string) {
+    try {
+      const res = await fetch(`/api/meals/${id}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "فشل في تحميل الوجبة");
+        return;
+      }
+
+      setItems(Array.isArray(data.items) ? data.items : []);
+    } catch (error) {
+      console.error(error);
+      alert("حدث خطأ أثناء تحميل الوجبة");
+    }
+  }
+
+  function calcRow(food: Food, qty_g: number) {
+    const factor = qty_g / 100;
+    const kcal = food.kcal_100 * factor;
+    const protein = food.protein_100 * factor;
+    const fat = food.fat_100 * factor;
+    const fiber = food.fiber_100 * factor;
+    const carbsTotal = food.carbs_total_100 * factor;
+    const netCarb = carbsTotal - fiber;
+    return { kcal, protein, fat, fiber, netCarb };
+  }
+
+  const totals = useMemo(() => {
+    return items.reduce(
+      (acc, item) => {
+        if (!item.foods) return acc;
+        const row = calcRow(item.foods, item.qty_g);
+        acc.kcal += row.kcal;
+        acc.protein += row.protein;
+        acc.fat += row.fat;
+        acc.fiber += row.fiber;
+        acc.netCarb += row.netCarb;
+        return acc;
+      },
+      { kcal: 0, protein: 0, fat: 0, fiber: 0, netCarb: 0 }
+    );
+  }, [items]);
+
+  const mealRisk = useMemo<MealRiskAnalysis>(() => {
+    const validFoods = items.map((item) => item.foods).filter((food): food is Food => !!food);
+
+    const totalSharedLoad = validFoods.reduce(
+      (sum, food) => sum + Number(food.renal_shared_load_score || 0),
+      0
+    );
+
+    const highPotassiumFoods = validFoods.filter((f) => !!f.is_high_potassium);
+    const highPhosphorusFoods = validFoods.filter((f) => !!f.is_high_phosphorus);
+    const denseProteinFoods = validFoods.filter((f) => !!
