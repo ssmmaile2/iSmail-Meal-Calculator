@@ -66,6 +66,36 @@ export async function GET(
   });
 }
 
+export async function PATCH(
+  req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id: mealId } = await context.params;
+  const body = await req.json();
+  const { title } = body;
+
+  if (!mealId) {
+    return NextResponse.json({ error: "mealId is missing" }, { status: 400 });
+  }
+
+  if (!title || typeof title !== "string") {
+    return NextResponse.json({ error: "title is required" }, { status: 400 });
+  }
+
+  const { data, error } = await supabase
+    .from("meals")
+    .update({ title })
+    .eq("id", mealId)
+    .select("id, title")
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(data);
+}
+
 export async function DELETE(
   _req: Request,
   context: { params: Promise<{ id: string }> }
