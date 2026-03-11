@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Food = {
   id: string;
@@ -31,6 +32,7 @@ type SavedMeal = {
 };
 
 export default function Page() {
+  const router = useRouter();
   const [mealId, setMealId] = useState<string | null>(null);
   const [mealTitle, setMealTitle] = useState("وجبة جديدة");
   const [savedMeals, setSavedMeals] = useState<SavedMeal[]>([]);
@@ -102,7 +104,7 @@ export default function Page() {
 
   async function loadSavedMeals() {
     try {
-      const res = await fetch("/api/meals?with_items=true");
+      const res = await fetch("/api/meals?with_items=true&hidden=false");
       const data = await res.json();
 
       if (!res.ok) {
@@ -118,6 +120,10 @@ export default function Page() {
     } catch (error) {
       console.error("loadSavedMeals error:", error);
     }
+  }
+
+  function openHiddenMeals() {
+    router.push("/hidden-meals");
   }
 
   async function refreshMeal(id: string) {
@@ -593,12 +599,34 @@ export default function Page() {
                     <td className="totals-label">الإجمالي</td>
                     <td></td>
                     <td>{Math.round(totals.kcal)}</td>
-                    <td>{Math.round(totals.protein)}</td>
+
+                    <td>
+                      <button
+                        onClick={saveHiddenMeal}
+                        className="macro-action-btn"
+                        title="حفظ خفي"
+                        type="button"
+                      >
+                        {Math.round(totals.protein)} P
+                      </button>
+                    </td>
+
                     <td>{Math.round(totals.fiber)}</td>
                     <td>{Math.round(totals.fat)}</td>
-                    <td>{Math.round(totals.netCarb)}</td>
+
+                    <td>
+                      <button
+                        onClick={openHiddenMeals}
+                        className="macro-action-btn"
+                        title="فتح السجل الخفي"
+                        type="button"
+                      >
+                        {Math.round(totals.netCarb)} Crb
+                      </button>
+                    </td>
+
                     <td></td>
-                  </tr>
+                  </tr>>
                 </tbody>
               </table>
             </div>
