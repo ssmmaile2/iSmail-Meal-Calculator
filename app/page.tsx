@@ -198,31 +198,32 @@ export default function Page() {
       alert("حدث خطأ أثناء حذف الوجبة");
     }
   }
-
+    
   async function saveMealTitle() {
     if (!mealId) return;
-
+  
     setSavingTitle(true);
-
+  
     try {
       const res = await fetch(`/api/meals/${mealId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: mealTitle }),
       });
-
+  
       const data = await res.json();
-
+  
       if (!res.ok) {
-        alert(data.error || "فشل في حفظ اسم الوجبة");
+        console.error("PATCH error:", data);
+        alert(data.error || `فشل في حفظ اسم الوجبة (HTTP ${res.status})`);
         return;
       }
-
+  
       setMealTitle(data.title || "وجبة جديدة");
       await loadSavedMeals();
       alert("تم الحفظ");
     } catch (error) {
-      console.error(error);
+      console.error("saveMealTitle error:", error);
       alert("حدث خطأ أثناء الحفظ");
     } finally {
       setSavingTitle(false);
