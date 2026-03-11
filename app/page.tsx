@@ -331,6 +331,31 @@ export default function Page() {
     }
   }
 
+  
+  async function saveHiddenMeal() {
+    if (!mealId) return;
+  
+    try {
+      const res = await fetch(`/api/meals/${mealId}/hide`, {
+        method: "POST",
+      });
+  
+      const data = await res.json();
+  
+      if (!res.ok) {
+        console.error("Hidden save error:", data);
+        alert(data.error || "فشل في الحفظ الخفي");
+        return;
+      }
+  
+      alert("تم الحفظ الخفي");
+    } catch (error) {
+      console.error(error);
+      alert("حدث خطأ أثناء الحفظ الخفي");
+    }
+  }
+
+  
   async function updateQty(itemId: string, newQty: number) {
     if (!mealId || Number.isNaN(newQty) || newQty < 0) return;
 
