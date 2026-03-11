@@ -132,7 +132,7 @@ export async function POST(
   // 6) فحص وجود منع زمني فعال
   const now = new Date();
 
-  for (const rule of timeRules ?? []) {
+  for (const rule of timeRules ?? []) {if (rule.rule_scope === "same_meal_only") continue;
     const blocksThisFood =
       (rule.blocked_food_id && rule.blocked_food_id === food_id) ||
       (rule.blocked_group_id && targetGroupIds.includes(rule.blocked_group_id));
