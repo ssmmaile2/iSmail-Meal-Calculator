@@ -837,7 +837,7 @@ export default function ChallengerPage() {
             marginBottom: 12,
           }}
         />
-
+        
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button
             onClick={saveCurrentMeal}
@@ -845,8 +845,8 @@ export default function ChallengerPage() {
             style={{
               padding: "12px 16px",
               borderRadius: 10,
-              border: "1px solid #111827",
-              background: "#111827",
+              border: "1px solid #15803d",
+              background: "#16a34a",
               color: "white",
               cursor: "pointer",
               fontWeight: 700,
@@ -854,16 +854,16 @@ export default function ChallengerPage() {
           >
             {savingMeal ? "جاري الحفظ..." : "حفظ الوجبة"}
           </button>
-
+        
           <a
             href="/challenger/meal-history"
             style={{
               display: "inline-block",
               padding: "12px 16px",
               borderRadius: 10,
-              border: "1px solid #ddd",
-              background: "white",
-              color: "#111",
+              border: "1px solid #2563eb",
+              background: "#2563eb",
+              color: "white",
               textDecoration: "none",
               fontWeight: 700,
             }}
