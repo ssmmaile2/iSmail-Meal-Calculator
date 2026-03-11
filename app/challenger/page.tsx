@@ -549,10 +549,10 @@ export default function ChallengerPage() {
 
   return (
     <main style={{ maxWidth: 1200, margin: "0 auto", padding: 16 }}>
-      <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>حاسبة السيد رشيد</h1>
+      <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>المنصة الغدائية للسيد رشيد</h1>
 
       <p style={{ marginBottom: 16, color: "#555" }}>
-        هذه الواجهة خاصة بالسيد رشيد، وتراعي التقييدات الكلوية والحمولة المشتركة.
+        منصة مخصصة لتذبير النظام الغدائي و ادارة الحمولة المشتركة على الصحة الكليوية  .
       </p>
 
       {blockingError && (
