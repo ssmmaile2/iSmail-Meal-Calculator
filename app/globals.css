@@ -466,6 +466,21 @@ input {
   font-weight: 800;
 }
 
+
+.macro-action-btn {
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.macro-action-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
 .totals-label {
   color: #0f172a;
 }
