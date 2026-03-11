@@ -7,6 +7,15 @@ type DayRow = {
   count: number;
 };
 
+function formatArabicDate(dateStr: string) {
+  const date = new Date(`${dateStr}T12:00:00`);
+  return new Intl.DateTimeFormat("ar-MA", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(date);
+}
+
 export default function MealHistoryPage() {
   const [days, setDays] = useState<DayRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,7 +78,9 @@ export default function MealHistoryPage() {
                 color: "#111",
               }}
             >
-              <div style={{ fontWeight: 700, fontSize: 18 }}>{day.date}</div>
+              <div style={{ fontWeight: 700, fontSize: 18 }}>
+                {formatArabicDate(day.date)}
+              </div>
               <div style={{ marginTop: 6, color: "#555" }}>
                 عدد الوجبات: {day.count}
               </div>
