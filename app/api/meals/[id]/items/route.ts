@@ -62,7 +62,8 @@ export async function POST(
       blocked_food_id,
       blocked_group_id,
       block_days,
-      notes
+      notes,
+      rule_scope
     `);
 
   if (timeRulesError) {
