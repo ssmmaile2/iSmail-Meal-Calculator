@@ -378,6 +378,38 @@ export default function ChallengerPage() {
       DENSE_ANIMAL_PROTEIN_CONFLICT_NAMES,
       (others) => `لا ينبغي جمع هذا العنصر مع بروتين حيواني مركز آخر في نفس اليوم: ${others.join("، ")}`
     );
+
+  const dairyItems = itemsWithFood.filter((item) =>
+    DENSE_DAIRY_CONFLICT_NAMES.map(normalizeArabic).includes(
+    normalizeArabic(item.foods.name_ar)
+    )
+  );
+  
+  const animalProteinItems = itemsWithFood.filter((item) =>
+    DENSE_ANIMAL_PROTEIN_CONFLICT_NAMES.map(normalizeArabic).includes(
+      normalizeArabic(item.foods.name_ar)
+    )
+  );
+  
+  if (dairyItems.length > 0 && animalProteinItems.length > 0) {
+    for (const item of dairyItems) {
+      addViolation(
+        item.id,
+        `لا ينبغي جمع هذا العنصر مع بروتين حيواني مركز في نفس الوجبة: ${animalProteinItems
+          .map((x) => x.foods.name_ar)
+          .join("، ")}`
+      );
+    }
+  
+    for (const item of animalProteinItems) {
+      addViolation(
+        item.id,
+        `لا ينبغي جمع هذا العنصر مع ألبان وأجبان مركزة في نفس الوجبة: ${dairyItems
+          .map((x) => x.foods.name_ar)
+          .join("، ")}`
+      );
+    }
+  }
     addGroupConflict(
       HIGH_POTASSIUM_FRUITS_CONFLICT_NAMES,
       (others) => `لا ينبغي جمع هذا العنصر مع فواكه أخرى أعلى بوتاسيوم في نفس اليوم: ${others.join("، ")}`
