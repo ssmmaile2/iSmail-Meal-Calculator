@@ -19,7 +19,10 @@ type EntryRow = {
 };
 
 function formatArabicDate(dateStr: string) {
+  if (!dateStr) return "";
   const date = new Date(`${dateStr}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return dateStr;
+
   return new Intl.DateTimeFormat("ar-MA", {
     weekday: "long",
     day: "numeric",
@@ -28,11 +31,15 @@ function formatArabicDate(dateStr: string) {
 }
 
 function format24h(dateTimeStr: string) {
+  if (!dateTimeStr) return "";
+  const date = new Date(dateTimeStr);
+  if (Number.isNaN(date.getTime())) return dateTimeStr;
+
   return new Intl.DateTimeFormat("ar-MA", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  }).format(new Date(dateTimeStr));
+  }).format(date);
 }
 
 export default function MealHistoryDayPage({
@@ -116,10 +123,12 @@ export default function MealHistoryDayPage({
       </p>
 
       <h1 style={{ fontSize: 30, fontWeight: 700, marginBottom: 16 }}>
-        وجبات يوم {formatArabicDate(dateValue)}
+        {dateValue ? `وجبات يوم ${formatArabicDate(dateValue)}` : "وجبات اليوم"}
       </h1>
 
-      {loading ? (
+      {!dateValue ? (
+        <p>جاري تهيئة الصفحة...</p>
+      ) : loading ? (
         <p>جاري التحميل...</p>
       ) : entries.length === 0 ? (
         <p>لا توجد وجبات محفوظة في هذا اليوم.</p>
