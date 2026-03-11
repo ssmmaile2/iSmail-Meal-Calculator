@@ -84,32 +84,37 @@ export default function MealHistoryDayPage({
     setLoading(true);
     loadDay(dateValue);
   }, [dateValue]);
-
+  
   async function deleteEntry(entryId: string) {
     const confirmed = window.confirm("هل تريد حذف هذه الوجبة المسجلة؟");
     if (!confirmed) return;
-
+  
     setDeletingId(entryId);
     try {
       const res = await fetch(`/api/challenger/meal-history/entry/${entryId}`, {
         method: "DELETE",
       });
-
-      const data = await res.json();
-
+  
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+  
       if (!res.ok) {
-        alert(data.error || "فشل في حذف الوجبة");
+        alert(data?.error || `فشل في حذف الوجبة (HTTP ${res.status})`);
         return;
       }
 
-      await loadDay(dateValue);
-    } catch (error) {
-      console.error(error);
-      alert("حدث خطأ أثناء حذف الوجبة");
-    } finally {
-      setDeletingId(null);
-    }
+    await loadDay(dateValue);
+  } catch (error) {
+    console.error(error);
+    alert("حدث خطأ أثناء حذف الوجبة");
+  } finally {
+    setDeletingId(null);
   }
+}
 
   return (
     <main style={{ maxWidth: 1000, margin: "0 auto", padding: 16 }}>
