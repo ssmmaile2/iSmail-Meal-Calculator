@@ -82,16 +82,12 @@ export async function PATCH(
     return NextResponse.json({ error: "title is required" }, { status: 400 });
   }
 
-const { title } = body;
-
-...
-
-const { data, error } = await supabase
-  .from("meals")
-  .update({ title })
-  .eq("id", mealId)
-  .select("id, title, is_hidden")
-  .single();
+  const { data, error } = await supabase
+    .from("meals")
+    .update({ title })
+    .eq("id", mealId)
+    .select("id, title, is_hidden")
+    .single();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -99,7 +95,6 @@ const { data, error } = await supabase
 
   return NextResponse.json(data);
 }
-
 export async function DELETE(
   _req: Request,
   context: { params: Promise<{ id: string }> }
