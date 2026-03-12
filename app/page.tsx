@@ -626,7 +626,7 @@ export default function Page() {
                     </td>
 
                     <td></td>
-                  </tr>>
+                  </tr>
                 </tbody>
               </table>
             </div>
