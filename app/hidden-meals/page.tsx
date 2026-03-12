@@ -33,9 +33,11 @@ type SavedMeal = {
 
 export default function Page() {
   const router = useRouter();
+
   const [mealId, setMealId] = useState<string | null>(null);
-  const [mealTitle, setMealTitle] = useState("وجبة جديدة");
+  const [mealTitle, setMealTitle] = useState("وجبة خفية جديدة");
   const [savedMeals, setSavedMeals] = useState<SavedMeal[]>([]);
+  const [savedMealsSearch, setSavedMealsSearch] = useState("");
   const [items, setItems] = useState<MealItem[]>([]);
   const [query, setQuery] = useState("");
   const [qty, setQty] = useState<number | "">(100);
@@ -46,36 +48,20 @@ export default function Page() {
 
   useEffect(() => {
     async function init() {
-      await loadSavedMeals();
-
-      try {
-        const res = await fetch("/api/meals", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: "وجبة جديدة" }),
-        });
-
-        const meal = await res.json();
-
-        if (!res.ok) {
-          alert(meal.error || "فشل في إنشاء الوجبة");
-          return;
-        }
-
-        setMealId(meal.id);
-        setMealTitle(meal.title || "وجبة جديدة");
-        await refreshMeal(meal.id);
-        await loadSavedMeals();
-      } catch (error) {
-        console.error(error);
-        alert("حدث خطأ أثناء إنشاء الوجبة");
-      } finally {
-        setLoading(false);
-      }
+      await loadSavedMeals("");
+      setLoading(false);
     }
 
     init();
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadSavedMeals(savedMealsSearch);
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [savedMealsSearch]);
 
   useEffect(() => {
     if (!query.trim()) {
@@ -102,13 +88,15 @@ export default function Page() {
     return () => clearTimeout(timer);
   }, [query]);
 
-  async function loadSavedMeals() {
+  async function loadSavedMeals(search = "") {
     try {
-      const res = await fetch("/api/meals?with_items=true&hidden=false");
+      const res = await fetch(
+        `/api/hidden-meals?with_items=true&query=${encodeURIComponent(search)}`
+      );
       const data = await res.json();
 
       if (!res.ok) {
-        console.error("Load meals failed:", data);
+        console.error("Load hidden meals failed:", data);
         return;
       }
 
@@ -122,23 +110,19 @@ export default function Page() {
     }
   }
 
-  function openHiddenMeals() {
-    router.push("/hidden-meals");
-  }
-
   async function refreshMeal(id: string) {
     try {
-      const res = await fetch(`/api/meals/${id}`);
+      const res = await fetch(`/api/hidden-meals/${id}`);
       const data = await res.json();
 
       if (!res.ok) {
-        console.error("GET /meal failed:", data);
+        console.error("GET /hidden-meal failed:", data);
         alert(data.error || "فشل في تحميل الوجبة");
         return;
       }
 
       setMealId(data.meal.id);
-      setMealTitle(data.meal.title || "وجبة جديدة");
+      setMealTitle(data.meal.title || "وجبة خفية جديدة");
       setItems(Array.isArray(data.items) ? data.items : []);
     } catch (error) {
       console.error("refreshMeal error:", error);
@@ -146,32 +130,13 @@ export default function Page() {
     }
   }
 
-  async function createNewMeal() {
-    try {
-      const res = await fetch("/api/meals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: "وجبة جديدة" }),
-      });
-
-      const meal = await res.json();
-
-      if (!res.ok) {
-        alert(meal.error || "فشل في إنشاء وجبة جديدة");
-        return;
-      }
-
-      setMealId(meal.id);
-      setMealTitle(meal.title || "وجبة جديدة");
-      setItems([]);
-      setQuery("");
-      setSuggestions([]);
-      setQty(100);
-      await loadSavedMeals();
-    } catch (error) {
-      console.error(error);
-      alert("حدث خطأ أثناء إنشاء وجبة جديدة");
-    }
+  function createNewMeal() {
+    setMealId(null);
+    setMealTitle("وجبة خفية جديدة");
+    setItems([]);
+    setQuery("");
+    setSuggestions([]);
+    setQty(100);
   }
 
   async function deleteMeal(targetMealId: string) {
@@ -179,7 +144,7 @@ export default function Page() {
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`/api/meals/${targetMealId}`, {
+      const res = await fetch(`/api/hidden-meals/${targetMealId}`, {
         method: "DELETE",
       });
 
@@ -192,10 +157,10 @@ export default function Page() {
 
       const wasCurrentMeal = mealId === targetMealId;
 
-      await loadSavedMeals();
+      await loadSavedMeals(savedMealsSearch);
 
       if (wasCurrentMeal) {
-        await createNewMeal();
+        createNewMeal();
       } else {
         setSavedMeals((prev) => prev.filter((meal) => meal.id !== targetMealId));
       }
@@ -204,29 +169,59 @@ export default function Page() {
       alert("حدث خطأ أثناء حذف الوجبة");
     }
   }
-    
+
   async function saveMealTitle() {
-    if (!mealId) return;
-  
     setSavingTitle(true);
-  
+
     try {
-      const res = await fetch(`/api/meals/${mealId}`, {
+      let currentMealId = mealId;
+
+      if (!currentMealId) {
+        const createRes = await fetch("/api/hidden-meals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: mealTitle?.trim() || "وجبة خفية جديدة",
+          }),
+        });
+
+        const created = await createRes.json();
+
+        if (!createRes.ok) {
+          console.error("Create hidden meal error:", created);
+          alert(created.error || "فشل في إنشاء الوجبة");
+          return;
+        }
+
+        currentMealId = created.id;
+        setMealId(created.id);
+      }
+
+      const payload = {
+        title: mealTitle?.trim() || "وجبة خفية جديدة",
+        items: items
+          .filter((item) => item.foods)
+          .map((item) => ({
+            food_id: item.foods!.id,
+            qty_g: item.qty_g,
+          })),
+      };
+
+      const res = await fetch(`/api/hidden-meals/${currentMealId}/full`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: mealTitle }),
+        body: JSON.stringify(payload),
       });
-  
+
       const data = await res.json();
-  
+
       if (!res.ok) {
-        console.error("PATCH error:", data);
-        alert(data.error || `فشل في حفظ اسم الوجبة (HTTP ${res.status})`);
+        console.error("PATCH full hidden meal error:", data);
+        alert(data.error || `فشل في حفظ الوجبة (HTTP ${res.status})`);
         return;
       }
-  
-      setMealTitle(data.title || "وجبة جديدة");
-      await loadSavedMeals();
+
+      await loadSavedMeals(savedMealsSearch);
       alert("تم الحفظ");
     } catch (error) {
       console.error("saveMealTitle error:", error);
@@ -286,9 +281,7 @@ export default function Page() {
     );
   }, [items]);
 
-  async function addItem(food: Food) {
-    if (!mealId) return;
-
+  function addItem(food: Food) {
     const finalQty =
       food.default_qty_g && Number(food.default_qty_g) > 0
         ? Number(food.default_qty_g)
@@ -299,28 +292,9 @@ export default function Page() {
     setAdding(true);
 
     try {
-      const res = await fetch(`/api/meals/${mealId}/items`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          food_id: food.id,
-          qty_g: finalQty,
-        }),
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        console.error("POST /items failed:", result);
-        alert(result.error || "فشل في إضافة العنصر");
-        return;
-      }
-
       const newItem: MealItem = {
-        id: result.id,
-        qty_g: result.qty_g,
+        id: crypto.randomUUID(),
+        qty_g: finalQty,
         foods: food,
       };
 
@@ -328,7 +302,6 @@ export default function Page() {
       setQuery("");
       setSuggestions([]);
       setQty(100);
-      await loadSavedMeals();
     } catch (error) {
       console.error("addItem error:", error);
       alert("حدث خطأ أثناء الإضافة");
@@ -337,86 +310,18 @@ export default function Page() {
     }
   }
 
-  
-  async function saveHiddenMeal() {
-    if (!mealId) return;
-  
-    try {
-      const res = await fetch(`/api/meals/${mealId}/hide`, {
-        method: "POST",
-      });
-  
-      const data = await res.json();
-  
-      if (!res.ok) {
-        console.error("Hidden save error:", data);
-        alert(data.error || "فشل في الحفظ الخفي");
-        return;
-      }
-  
-      alert("تم الحفظ الخفي");
-    } catch (error) {
-      console.error(error);
-      alert("حدث خطأ أثناء الحفظ الخفي");
-    }
+  function updateQty(itemId: string, newQty: number) {
+    if (Number.isNaN(newQty) || newQty < 0) return;
+
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === itemId ? { ...item, qty_g: newQty } : item
+      )
+    );
   }
 
-  
-  async function updateQty(itemId: string, newQty: number) {
-    if (!mealId || Number.isNaN(newQty) || newQty < 0) return;
-
-    try {
-      const res = await fetch(`/api/meals/${mealId}/items/${itemId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ qty_g: newQty }),
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        console.error("PATCH /items failed:", result);
-        alert(result.error || "فشل في تعديل الكمية");
-        return;
-      }
-
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === itemId ? { ...item, qty_g: newQty } : item
-        )
-      );
-
-      await loadSavedMeals();
-    } catch (error) {
-      console.error("updateQty error:", error);
-      alert("حدث خطأ أثناء تعديل الكمية");
-    }
-  }
-
-  async function deleteItem(itemId: string) {
-    if (!mealId) return;
-
-    try {
-      const res = await fetch(`/api/meals/${mealId}/items/${itemId}`, {
-        method: "DELETE",
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        console.error("DELETE /items failed:", result);
-        alert(result.error || "فشل في حذف العنصر");
-        return;
-      }
-
-      setItems((prev) => prev.filter((item) => item.id !== itemId));
-      await loadSavedMeals();
-    } catch (error) {
-      console.error("deleteItem error:", error);
-      alert("حدث خطأ أثناء حذف العنصر");
-    }
+  function deleteItem(itemId: string) {
+    setItems((prev) => prev.filter((item) => item.id !== itemId));
   }
 
   return (
@@ -430,6 +335,15 @@ export default function Page() {
           <div className="sidebar-header">
             <strong>الوجبات المحفوظة</strong>
             <span className="sidebar-count">{savedMeals.length}</span>
+          </div>
+
+          <div className="sidebar-search-wrap" style={{ marginBottom: 12 }}>
+            <input
+              value={savedMealsSearch}
+              onChange={(e) => setSavedMealsSearch(e.target.value)}
+              placeholder="ابحث في الوجبات المحفوظة..."
+              className="app-input"
+            />
           </div>
 
           <div className="saved-meals-list">
@@ -476,6 +390,7 @@ export default function Page() {
               <button
                 onClick={createNewMeal}
                 className="primary-btn green-btn"
+                type="button"
               >
                 وجبة جديدة
               </button>
@@ -491,8 +406,17 @@ export default function Page() {
                 onClick={saveMealTitle}
                 disabled={savingTitle}
                 className="primary-btn blue"
+                type="button"
               >
-                حفظ
+                {savingTitle ? "جاري الحفظ..." : "حفظ"}
+              </button>
+
+              <button
+                onClick={() => router.push("/")}
+                className="primary-btn"
+                type="button"
+              >
+                الصفحة الرئيسية
               </button>
             </div>
 
@@ -523,6 +447,7 @@ export default function Page() {
                     onClick={() => addItem(food)}
                     disabled={adding}
                     className="suggestion-item"
+                    type="button"
                   >
                     <div className="suggestion-title">{food.name_ar}</div>
                     <div className="suggestion-meta">
@@ -587,6 +512,7 @@ export default function Page() {
                           <button
                             onClick={() => deleteItem(item.id)}
                             className="danger-btn small"
+                            type="button"
                           >
                             حذف
                           </button>
@@ -599,32 +525,10 @@ export default function Page() {
                     <td className="totals-label">الإجمالي</td>
                     <td></td>
                     <td>{Math.round(totals.kcal)}</td>
-
-                    <td>
-                      <button
-                        onClick={saveHiddenMeal}
-                        className="macro-action-btn"
-                        title="حفظ خفي"
-                        type="button"
-                      >
-                        {Math.round(totals.protein)} P
-                      </button>
-                    </td>
-
+                    <td>{Math.round(totals.protein)} P</td>
                     <td>{Math.round(totals.fiber)}</td>
                     <td>{Math.round(totals.fat)}</td>
-
-                    <td>
-                      <button
-                        onClick={openHiddenMeals}
-                        className="macro-action-btn"
-                        title="فتح السجل الخفي"
-                        type="button"
-                      >
-                        {Math.round(totals.netCarb)} Crb
-                      </button>
-                    </td>
-
+                    <td>{Math.round(totals.netCarb)} Crb</td>
                     <td></td>
                   </tr>
                 </tbody>
