@@ -26,6 +26,8 @@ type RecipeItem = {
 export default function CompositeCalculatorPage() {
   const router = useRouter();
 
+  const [mode, setMode] = useState<"recipe" | "manual">("recipe");
+
   const [mealName, setMealName] = useState("");
   const [alias1, setAlias1] = useState("");
   const [alias2, setAlias2] = useState("");
@@ -37,10 +39,21 @@ export default function CompositeCalculatorPage() {
   const [items, setItems] = useState<RecipeItem[]>([]);
   const [finalYieldG, setFinalYieldG] = useState<number | "">("");
 
+  const [manualKcal, setManualKcal] = useState<number | "">("");
+  const [manualProtein, setManualProtein] = useState<number | "">("");
+  const [manualFat, setManualFat] = useState<number | "">("");
+  const [manualCarbs, setManualCarbs] = useState<number | "">("");
+  const [manualFiber, setManualFiber] = useState<number | "">("");
+
   const [copyingSql, setCopyingSql] = useState(false);
   const [savingToFoods, setSavingToFoods] = useState(false);
 
   useEffect(() => {
+    if (mode !== "recipe") {
+      setSuggestions([]);
+      return;
+    }
+
     if (!query.trim()) {
       setSuggestions([]);
       return;
@@ -63,7 +76,7 @@ export default function CompositeCalculatorPage() {
     }, 250);
 
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, mode]);
 
   function addItem(food: Food) {
     const finalQtyValue =
@@ -119,6 +132,16 @@ export default function CompositeCalculatorPage() {
   }, [items]);
 
   const per100 = useMemo(() => {
+    if (mode === "manual") {
+      return {
+        kcal: manualKcal === "" ? 0 : Number(manualKcal),
+        protein: manualProtein === "" ? 0 : Number(manualProtein),
+        fat: manualFat === "" ? 0 : Number(manualFat),
+        carbs_total: manualCarbs === "" ? 0 : Number(manualCarbs),
+        fiber: manualFiber === "" ? 0 : Number(manualFiber),
+      };
+    }
+
     const yieldValue =
       finalYieldG === "" || Number(finalYieldG) <= 0 ? 0 : Number(finalYieldG);
 
@@ -141,14 +164,23 @@ export default function CompositeCalculatorPage() {
       carbs_total: totals.carbs_total * factor,
       fiber: totals.fiber * factor,
     };
-  }, [totals, finalYieldG]);
+  }, [
+    mode,
+    totals,
+    finalYieldG,
+    manualKcal,
+    manualProtein,
+    manualFat,
+    manualCarbs,
+    manualFiber,
+  ]);
 
   const netCarbPer100 = per100.carbs_total - per100.fiber;
 
   const sqlSnippet = useMemo(() => {
-    const safeName = mealName.trim() || "وجبة مركبة جديدة";
+    const safeName = mealName.trim() || "عنصر غذائي جديد";
 
-    const aliases = [safeName, alias1.trim(), alias2.trim()]
+    const aliases = [alias1.trim(), alias2.trim()]
       .filter(Boolean)
       .map((v) => `"${v.replace(/"/g, '\\"')}"`);
 
@@ -187,18 +219,31 @@ values
 
   async function copySqlToClipboard() {
     if (!mealName.trim()) {
-      alert("يرجى إدخال اسم الوجبة أولًا");
+      alert("يرجى إدخال اسم العنصر أولًا");
       return;
     }
 
-    if (items.length === 0) {
-      alert("يرجى إضافة مكونات الوجبة أولًا");
-      return;
-    }
+    if (mode === "recipe") {
+      if (items.length === 0) {
+        alert("يرجى إضافة مكونات الوجبة أولًا");
+        return;
+      }
 
-    if (finalYieldG === "" || Number(finalYieldG) <= 0) {
-      alert("يرجى إدخال الوزن النهائي المتحصل عليه");
-      return;
+      if (finalYieldG === "" || Number(finalYieldG) <= 0) {
+        alert("يرجى إدخال الوزن النهائي المتحصل عليه");
+        return;
+      }
+    } else {
+      if (
+        manualKcal === "" ||
+        manualProtein === "" ||
+        manualFat === "" ||
+        manualCarbs === "" ||
+        manualFiber === ""
+      ) {
+        alert("يرجى إدخال جميع القيم الغذائية اليدوية");
+        return;
+      }
     }
 
     setCopyingSql(true);
@@ -216,39 +261,65 @@ values
 
   async function addCompositeMealToFoods() {
     if (!mealName.trim()) {
-      alert("يرجى إدخال اسم الوجبة");
-      return;
-    }
-
-    if (items.length === 0) {
-      alert("يرجى إضافة مكونات الوجبة أولًا");
-      return;
-    }
-
-    if (finalYieldG === "" || Number(finalYieldG) <= 0) {
-      alert("يرجى إدخال الوزن النهائي المتحصل عليه");
+      alert("يرجى إدخال اسم العنصر");
       return;
     }
 
     setSavingToFoods(true);
 
     try {
-      const aliases = [mealName.trim(), alias1.trim(), alias2.trim()].filter(
-        Boolean
-      );
+      const aliases = [alias1.trim(), alias2.trim()].filter(Boolean);
 
-      const payload = {
-        name_ar: mealName.trim(),
-        aliases,
-        kcal_100: Number(per100.kcal.toFixed(2)),
-        protein_100: Number(per100.protein.toFixed(2)),
-        fat_100: Number(per100.fat.toFixed(2)),
-        carbs_total_100: Number(per100.carbs_total.toFixed(2)),
-        fiber_100: Number(per100.fiber.toFixed(2)),
-        notes: notes.trim(),
-        default_qty_g: 100,
-        is_preset: true,
-      };
+      let payload;
+
+      if (mode === "manual") {
+        if (
+          manualKcal === "" ||
+          manualProtein === "" ||
+          manualFat === "" ||
+          manualCarbs === "" ||
+          manualFiber === ""
+        ) {
+          alert("يرجى إدخال جميع القيم الغذائية");
+          return;
+        }
+
+        payload = {
+          name_ar: mealName.trim(),
+          aliases,
+          kcal_100: Number(manualKcal),
+          protein_100: Number(manualProtein),
+          fat_100: Number(manualFat),
+          carbs_total_100: Number(manualCarbs),
+          fiber_100: Number(manualFiber),
+          notes: notes.trim(),
+          default_qty_g: 100,
+          is_preset: true,
+        };
+      } else {
+        if (items.length === 0) {
+          alert("يرجى إضافة مكونات الوجبة");
+          return;
+        }
+
+        if (finalYieldG === "" || Number(finalYieldG) <= 0) {
+          alert("يرجى إدخال الوزن النهائي");
+          return;
+        }
+
+        payload = {
+          name_ar: mealName.trim(),
+          aliases,
+          kcal_100: Number(per100.kcal.toFixed(2)),
+          protein_100: Number(per100.protein.toFixed(2)),
+          fat_100: Number(per100.fat.toFixed(2)),
+          carbs_total_100: Number(per100.carbs_total.toFixed(2)),
+          fiber_100: Number(per100.fiber.toFixed(2)),
+          notes: notes.trim(),
+          default_qty_g: 100,
+          is_preset: true,
+        };
+      }
 
       const res = await fetch("/api/foods", {
         method: "POST",
@@ -262,11 +333,11 @@ values
 
       if (!res.ok) {
         console.error("Add to foods failed:", data);
-        alert(data.error || "فشل في إضافة الوجبة إلى قاعدة البيانات");
+        alert(data.error || "فشل في إضافة العنصر إلى قاعدة البيانات");
         return;
       }
 
-      alert("تمت إضافة الوجبة المركبة إلى قاعدة البيانات بنجاح");
+      alert("تمت إضافة العنصر إلى قاعدة البيانات بنجاح");
     } catch (error) {
       console.error(error);
       alert("حدث خطأ أثناء الإضافة إلى قاعدة البيانات");
@@ -285,6 +356,12 @@ values
     setSuggestions([]);
     setItems([]);
     setFinalYieldG("");
+    setManualKcal("");
+    setManualProtein("");
+    setManualFat("");
+    setManualCarbs("");
+    setManualFiber("");
+    setMode("recipe");
   }
 
   return (
@@ -334,6 +411,24 @@ values
             </button>
           </div>
 
+          <div className="mode-toggle" style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
+            <button
+              className={`primary-btn ${mode === "recipe" ? "blue" : ""}`}
+              onClick={() => setMode("recipe")}
+              type="button"
+            >
+              وصفة مركبة
+            </button>
+
+            <button
+              className={`primary-btn ${mode === "manual" ? "blue" : ""}`}
+              onClick={() => setMode("manual")}
+              type="button"
+            >
+              إدخال يدوي
+            </button>
+          </div>
+
           <div
             style={{
               display: "grid",
@@ -345,7 +440,7 @@ values
             <input
               value={mealName}
               onChange={(e) => setMealName(e.target.value)}
-              placeholder="اسم الوجبة"
+              placeholder="اسم العنصر أو الوجبة"
               className="app-input"
             />
 
@@ -373,171 +468,267 @@ values
             />
           </div>
 
-          <div className="search-row" style={{ marginTop: 14 }}>
-            <input
-              type="number"
-              value={qty}
-              onChange={(e) =>
-                setQty(e.target.value === "" ? "" : Number(e.target.value))
-              }
-              placeholder="كمية المكون بالغرام"
-              className="qty-side-input"
-            />
-
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="ابحث عن مكوّن..."
-              className="app-input"
-            />
-          </div>
-
-          {suggestions.length > 0 && (
-            <div className="suggestions-box">
-              {suggestions.map((food) => (
-                <button
-                  key={food.id}
-                  onClick={() => addItem(food)}
-                  className="suggestion-item"
-                  type="button"
-                >
-                  <div className="suggestion-title">{food.name_ar}</div>
-                  <div className="suggestion-meta">
-                    {food.notes || ""}
-                    {food.default_qty_g
-                      ? ` — وزن افتراضي: ${food.default_qty_g}غ`
-                      : ""}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="desktop-table-wrap card">
-          <table className="meal-table">
-            <thead>
-              <tr>
-                <th>المكوّن</th>
-                <th>الكمية (غ)</th>
-                <th>Kc</th>
-                <th>P</th>
-                <th>F</th>
-                <th>Carb</th>
-                <th>Fiber</th>
-                <th>حذف</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => {
-                const factor = item.qty_g / 100;
-
-                const kcal = item.food.kcal_100 * factor;
-                const protein = item.food.protein_100 * factor;
-                const fat = item.food.fat_100 * factor;
-                const carbs = item.food.carbs_total_100 * factor;
-                const fiber = item.food.fiber_100 * factor;
-
-                return (
-                  <tr key={item.id}>
-                    <td>
-                      <div className="table-food-title">{item.food.name_ar}</div>
-                      <div className="table-food-note">{item.food.notes || ""}</div>
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        value={item.qty_g}
-                        onChange={(e) =>
-                          updateQty(item.id, Number(e.target.value))
-                        }
-                        className="qty-input"
-                      />
-                    </td>
-                    <td>{Math.round(kcal)}</td>
-                    <td>{Math.round(protein)}</td>
-                    <td>{Math.round(fat)}</td>
-                    <td>{Math.round(carbs)}</td>
-                    <td>{Math.round(fiber)}</td>
-                    <td>
-                      <button
-                        onClick={() => deleteItem(item.id)}
-                        className="danger-btn small"
-                        type="button"
-                      >
-                        حذف
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-
-              <tr className="totals-row">
-                <td className="totals-label">مجموع الطبق</td>
-                <td></td>
-                <td>{totals.kcal.toFixed(1)}</td>
-                <td>{totals.protein.toFixed(1)}</td>
-                <td>{totals.fat.toFixed(1)}</td>
-                <td>{totals.carbs_total.toFixed(1)}</td>
-                <td>{totals.fiber.toFixed(1)}</td>
-                <td></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div className="card form-card" style={{ marginTop: 16 }}>
-          <div
-            style={{
-              display: "grid",
-              gap: 12,
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-              alignItems: "start",
-            }}
-          >
-            <div>
-              <label
-                style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-              >
-                الوزن النهائي المتحصل عليه بعد النقع/الطبخ (غ)
-              </label>
+          {mode === "manual" && (
+            <div
+              style={{
+                display: "grid",
+                gap: 10,
+                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                marginTop: 14,
+              }}
+            >
               <input
                 type="number"
-                value={finalYieldG}
+                placeholder="Kcal /100g"
+                value={manualKcal}
                 onChange={(e) =>
-                  setFinalYieldG(
-                    e.target.value === "" ? "" : Number(e.target.value)
-                  )
+                  setManualKcal(e.target.value === "" ? "" : Number(e.target.value))
                 }
-                placeholder="مثال: 3250"
+                className="app-input"
+              />
+
+              <input
+                type="number"
+                placeholder="Protein"
+                value={manualProtein}
+                onChange={(e) =>
+                  setManualProtein(e.target.value === "" ? "" : Number(e.target.value))
+                }
+                className="app-input"
+              />
+
+              <input
+                type="number"
+                placeholder="Fat"
+                value={manualFat}
+                onChange={(e) =>
+                  setManualFat(e.target.value === "" ? "" : Number(e.target.value))
+                }
+                className="app-input"
+              />
+
+              <input
+                type="number"
+                placeholder="Carbs"
+                value={manualCarbs}
+                onChange={(e) =>
+                  setManualCarbs(e.target.value === "" ? "" : Number(e.target.value))
+                }
+                className="app-input"
+              />
+
+              <input
+                type="number"
+                placeholder="Fiber"
+                value={manualFiber}
+                onChange={(e) =>
+                  setManualFiber(e.target.value === "" ? "" : Number(e.target.value))
+                }
                 className="app-input"
               />
             </div>
+          )}
 
-            <div>
-              <label
-                style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-              >
-                القيم لكل 100غ من الناتج النهائي
-              </label>
+          {mode === "recipe" && (
+            <>
+              <div className="search-row" style={{ marginTop: 14 }}>
+                <input
+                  type="number"
+                  value={qty}
+                  onChange={(e) =>
+                    setQty(e.target.value === "" ? "" : Number(e.target.value))
+                  }
+                  placeholder="كمية المكون بالغرام"
+                  className="qty-side-input"
+                />
+
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="ابحث عن مكوّن..."
+                  className="app-input"
+                />
+              </div>
+
+              {suggestions.length > 0 && (
+                <div className="suggestions-box">
+                  {suggestions.map((food) => (
+                    <button
+                      key={food.id}
+                      onClick={() => addItem(food)}
+                      className="suggestion-item"
+                      type="button"
+                    >
+                      <div className="suggestion-title">{food.name_ar}</div>
+                      <div className="suggestion-meta">
+                        {food.notes || ""}
+                        {food.default_qty_g
+                          ? ` — وزن افتراضي: ${food.default_qty_g}غ`
+                          : ""}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {mode === "recipe" && (
+          <>
+            <div className="desktop-table-wrap card">
+              <table className="meal-table">
+                <thead>
+                  <tr>
+                    <th>المكوّن</th>
+                    <th>الكمية (غ)</th>
+                    <th>Kc</th>
+                    <th>P</th>
+                    <th>F</th>
+                    <th>Carb</th>
+                    <th>Fiber</th>
+                    <th>حذف</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item) => {
+                    const factor = item.qty_g / 100;
+
+                    const kcal = item.food.kcal_100 * factor;
+                    const protein = item.food.protein_100 * factor;
+                    const fat = item.food.fat_100 * factor;
+                    const carbs = item.food.carbs_total_100 * factor;
+                    const fiber = item.food.fiber_100 * factor;
+
+                    return (
+                      <tr key={item.id}>
+                        <td>
+                          <div className="table-food-title">{item.food.name_ar}</div>
+                          <div className="table-food-note">{item.food.notes || ""}</div>
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            value={item.qty_g}
+                            onChange={(e) =>
+                              updateQty(item.id, Number(e.target.value))
+                            }
+                            className="qty-input"
+                          />
+                        </td>
+                        <td>{Math.round(kcal)}</td>
+                        <td>{Math.round(protein)}</td>
+                        <td>{Math.round(fat)}</td>
+                        <td>{Math.round(carbs)}</td>
+                        <td>{Math.round(fiber)}</td>
+                        <td>
+                          <button
+                            onClick={() => deleteItem(item.id)}
+                            className="danger-btn small"
+                            type="button"
+                          >
+                            حذف
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  <tr className="totals-row">
+                    <td className="totals-label">مجموع الطبق</td>
+                    <td></td>
+                    <td>{totals.kcal.toFixed(1)}</td>
+                    <td>{totals.protein.toFixed(1)}</td>
+                    <td>{totals.fat.toFixed(1)}</td>
+                    <td>{totals.carbs_total.toFixed(1)}</td>
+                    <td>{totals.fiber.toFixed(1)}</td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="card form-card" style={{ marginTop: 16 }}>
               <div
                 style={{
-                  border: "1px solid #e5e7eb",
-                  borderRadius: 12,
-                  padding: 12,
-                  lineHeight: 1.9,
+                  display: "grid",
+                  gap: 12,
+                  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                  alignItems: "start",
                 }}
               >
-                <div>🔥 Kc: {per100.kcal.toFixed(2)}</div>
-                <div>🥩 P: {per100.protein.toFixed(2)}</div>
-                <div>🧈 F: {per100.fat.toFixed(2)}</div>
-                <div>🌾 Carb: {per100.carbs_total.toFixed(2)}</div>
-                <div>🌿 Fiber: {per100.fiber.toFixed(2)}</div>
-                <div>✅ Net Carb: {netCarbPer100.toFixed(2)}</div>
+                <div>
+                  <label
+                    style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+                  >
+                    الوزن النهائي المتحصل عليه بعد النقع/الطبخ (غ)
+                  </label>
+                  <input
+                    type="number"
+                    value={finalYieldG}
+                    onChange={(e) =>
+                      setFinalYieldG(
+                        e.target.value === "" ? "" : Number(e.target.value)
+                      )
+                    }
+                    placeholder="مثال: 3250"
+                    className="app-input"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+                  >
+                    القيم لكل 100غ من الناتج النهائي
+                  </label>
+                  <div
+                    style={{
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 12,
+                      padding: 12,
+                      lineHeight: 1.9,
+                    }}
+                  >
+                    <div>🔥 Kc: {per100.kcal.toFixed(2)}</div>
+                    <div>🥩 P: {per100.protein.toFixed(2)}</div>
+                    <div>🧈 F: {per100.fat.toFixed(2)}</div>
+                    <div>🌾 Carb: {per100.carbs_total.toFixed(2)}</div>
+                    <div>🌿 Fiber: {per100.fiber.toFixed(2)}</div>
+                    <div>✅ Net Carb: {netCarbPer100.toFixed(2)}</div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          </>
+        )}
 
+        {mode === "manual" && (
+          <div className="card form-card" style={{ marginTop: 16 }}>
+            <label
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
+              القيم اليدوية لكل 100غ
+            </label>
+            <div
+              style={{
+                border: "1px solid #e5e7eb",
+                borderRadius: 12,
+                padding: 12,
+                lineHeight: 1.9,
+              }}
+            >
+              <div>🔥 Kc: {per100.kcal.toFixed(2)}</div>
+              <div>🥩 P: {per100.protein.toFixed(2)}</div>
+              <div>🧈 F: {per100.fat.toFixed(2)}</div>
+              <div>🌾 Carb: {per100.carbs_total.toFixed(2)}</div>
+              <div>🌿 Fiber: {per100.fiber.toFixed(2)}</div>
+              <div>✅ Net Carb: {netCarbPer100.toFixed(2)}</div>
+            </div>
+          </div>
+        )}
+
+        <div className="card form-card" style={{ marginTop: 16 }}>
           <div style={{ marginTop: 14 }}>
             <label
               style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
