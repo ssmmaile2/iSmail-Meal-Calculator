@@ -419,7 +419,16 @@ export default function Page() {
                 الصفحة الرئيسية
               </button>
             </div>
-
+            <div className="bottom-nav-buttons">
+              <button
+                className="primary-btn blue"
+                onClick={() => router.push("/hidden-meals/composite-calculator")}
+                type="button"
+              >
+                حساب الوجبات المركبة
+              </button>
+            </div>
+            
             <div className="search-row">
               <input
                 type="number"
