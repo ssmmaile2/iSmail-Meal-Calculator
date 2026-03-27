@@ -1,59 +1,11 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 
-type FoodRow = {
-  id: string;
-  name_ar: string;
-  aliases?: string[] | null;
-  kcal_100: number;
-  protein_100: number;
-  fat_100: number;
-  carbs_total_100: number;
-  fiber_100: number;
-  notes?: string | null;
-  default_qty_g?: number | null;
-  is_preset?: boolean | null;
-
-  renal_group?: string | null;
-  renal_reason?: string | null;
-  renal_max_per_meal_g?: number | null;
-  renal_max_times_per_day?: number | null;
-  renal_max_times_per_week?: number | null;
-  renal_limit_details?: string | null;
-
-  is_high_potassium?: boolean | null;
-  is_high_phosphorus?: boolean | null;
-  is_dense_protein?: boolean | null;
-  is_high_sodium?: boolean | null;
-  renal_shared_load_score?: number | null;
-  renal_combo_warning?: boolean | null;
-  renal_combo_notes?: string | null;
-};
-
-function normalizeArabic(text: string) {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[أإآ]/g, "ا")
-    .replace(/ة/g, "ه")
-    .replace(/ى/g, "ي")
-    .replace(/ؤ/g, "و")
-    .replace(/ئ/g, "ي")
-    .replace(/[\u064B-\u065F\u0670]/g, "")
-    .replace(/\s+/g, " ");
-}
-
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("query") || "").trim();
 
-  if (!q) {
-    return NextResponse.json([]);
-  }
-
-  const normalizedQ = normalizeArabic(q);
-
-  const { data, error } = await supabase
+  let query = supabase
     .from("foods")
     .select(`
       id,
@@ -66,42 +18,70 @@ export async function GET(req: Request) {
       fiber_100,
       notes,
       default_qty_g,
-      is_preset,
-      renal_group,
-      renal_reason,
-      renal_max_per_meal_g,
-      renal_max_times_per_day,
-      renal_max_times_per_week,
-      renal_limit_details,
-      is_high_potassium,
-      is_high_phosphorus,
-      is_dense_protein,
-      is_high_sodium,
-      renal_shared_load_score,
-      renal_combo_warning,
-      renal_combo_notes
+      is_preset
     `)
-    .order("name_ar", { ascending: true });
+    .order("name_ar", { ascending: true })
+    .limit(20);
+
+  if (q) {
+    query = query.ilike("name_ar", `%${q}%`);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const rows = (data ?? []) as FoodRow[];
+  return NextResponse.json(data ?? []);
+}
 
-  const filtered = rows.filter((item) => {
-    const name = normalizeArabic(item.name_ar || "");
-    const notes = normalizeArabic(item.notes || "");
-    const aliases = Array.isArray(item.aliases)
-      ? item.aliases.map((a) => normalizeArabic(a))
-      : [];
+export async function POST(req: Request) {
+  const body = await req.json();
 
-    return (
-      name.includes(normalizedQ) ||
-      notes.includes(normalizedQ) ||
-      aliases.some((alias) => alias.includes(normalizedQ))
-    );
-  });
+  const {
+    name_ar,
+    aliases,
+    kcal_100,
+    protein_100,
+    fat_100,
+    carbs_total_100,
+    fiber_100,
+    notes,
+    default_qty_g,
+    is_preset,
+  } = body;
 
-  return NextResponse.json(filtered.slice(0, 20));
+  if (!name_ar || typeof name_ar !== "string") {
+    return NextResponse.json({ error: "name_ar is required" }, { status: 400 });
+  }
+
+  const parsedAliases = Array.isArray(aliases)
+    ? aliases.filter((v) => typeof v === "string" && v.trim())
+    : [];
+
+  const { data, error } = await supabase
+    .from("foods")
+    .insert([
+      {
+        name_ar: name_ar.trim(),
+        aliases: parsedAliases,
+        kcal_100: Number(kcal_100 || 0),
+        protein_100: Number(protein_100 || 0),
+        fat_100: Number(fat_100 || 0),
+        carbs_total_100: Number(carbs_total_100 || 0),
+        fiber_100: Number(fiber_100 || 0),
+        notes: typeof notes === "string" ? notes.trim() : "",
+        default_qty_g: Number(default_qty_g || 100),
+        is_preset: typeof is_preset === "boolean" ? is_preset : true,
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(data);
 }
