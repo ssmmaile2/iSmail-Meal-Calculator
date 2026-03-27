@@ -37,6 +37,9 @@ export default function CompositeCalculatorPage() {
   const [items, setItems] = useState<RecipeItem[]>([]);
   const [finalYieldG, setFinalYieldG] = useState<number | "">("");
 
+  const [copyingSql, setCopyingSql] = useState(false);
+  const [savingToFoods, setSavingToFoods] = useState(false);
+
   useEffect(() => {
     if (!query.trim()) {
       setSuggestions([]);
@@ -68,15 +71,13 @@ export default function CompositeCalculatorPage() {
         ? Number(food.default_qty_g || 100)
         : Number(qty);
 
-    setItems((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        qty_g: finalQtyValue,
-        food,
-      },
-    ]);
+    const newItem: RecipeItem = {
+      id: crypto.randomUUID(),
+      qty_g: finalQtyValue,
+      food,
+    };
 
+    setItems((prev) => [...prev, newItem]);
     setQuery("");
     setSuggestions([]);
     setQty(100);
@@ -151,10 +152,10 @@ export default function CompositeCalculatorPage() {
       .filter(Boolean)
       .map((v) => `"${v.replace(/"/g, '\\"')}"`);
 
-    const aliasArray =
-      aliases.length > 0 ? `{${aliases.join(",")}}` : `{}`;
+    const aliasArray = aliases.length > 0 ? `{${aliases.join(",")}}` : `{}`;
 
     const safeNotes = notes.trim().replace(/'/g, "''");
+    const safeMealName = safeName.replace(/'/g, "''");
 
     return `insert into public.foods
 (
@@ -171,7 +172,7 @@ export default function CompositeCalculatorPage() {
 )
 values
 (
-  '${safeName.replace(/'/g, "''")}',
+  '${safeMealName}',
   '${aliasArray}',
   ${per100.kcal.toFixed(2)},
   ${per100.protein.toFixed(2)},
@@ -200,13 +201,90 @@ values
       return;
     }
 
+    setCopyingSql(true);
+
     try {
       await navigator.clipboard.writeText(sqlSnippet);
       alert("تم نسخ SQL إلى الحافظة");
     } catch (error) {
       console.error(error);
       alert("تعذر النسخ إلى الحافظة");
+    } finally {
+      setCopyingSql(false);
     }
+  }
+
+  async function addCompositeMealToFoods() {
+    if (!mealName.trim()) {
+      alert("يرجى إدخال اسم الوجبة");
+      return;
+    }
+
+    if (items.length === 0) {
+      alert("يرجى إضافة مكونات الوجبة أولًا");
+      return;
+    }
+
+    if (finalYieldG === "" || Number(finalYieldG) <= 0) {
+      alert("يرجى إدخال الوزن النهائي المتحصل عليه");
+      return;
+    }
+
+    setSavingToFoods(true);
+
+    try {
+      const aliases = [mealName.trim(), alias1.trim(), alias2.trim()].filter(
+        Boolean
+      );
+
+      const payload = {
+        name_ar: mealName.trim(),
+        aliases,
+        kcal_100: Number(per100.kcal.toFixed(2)),
+        protein_100: Number(per100.protein.toFixed(2)),
+        fat_100: Number(per100.fat.toFixed(2)),
+        carbs_total_100: Number(per100.carbs_total.toFixed(2)),
+        fiber_100: Number(per100.fiber.toFixed(2)),
+        notes: notes.trim(),
+        default_qty_g: 100,
+        is_preset: true,
+      };
+
+      const res = await fetch("/api/foods", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("Add to foods failed:", data);
+        alert(data.error || "فشل في إضافة الوجبة إلى قاعدة البيانات");
+        return;
+      }
+
+      alert("تمت إضافة الوجبة المركبة إلى قاعدة البيانات بنجاح");
+    } catch (error) {
+      console.error(error);
+      alert("حدث خطأ أثناء الإضافة إلى قاعدة البيانات");
+    } finally {
+      setSavingToFoods(false);
+    }
+  }
+
+  function resetForm() {
+    setMealName("");
+    setAlias1("");
+    setAlias2("");
+    setNotes("");
+    setQuery("");
+    setQty(100);
+    setSuggestions([]);
+    setItems([]);
+    setFinalYieldG("");
   }
 
   return (
@@ -215,7 +293,10 @@ values
         <h1 className="app-title">حاسبة الوجبات المركبة</h1>
       </div>
 
-      <div className="content-column" style={{ maxWidth: 1100, margin: "0 auto" }}>
+      <div
+        className="content-column"
+        style={{ maxWidth: 1100, margin: "0 auto" }}
+      >
         <div className="card form-card">
           <div className="meal-actions-row">
             <button
@@ -228,10 +309,28 @@ values
 
             <button
               onClick={copySqlToClipboard}
+              className="primary-btn"
+              type="button"
+              disabled={copyingSql}
+            >
+              {copyingSql ? "جارٍ النسخ..." : "نسخ SQL"}
+            </button>
+
+            <button
+              onClick={addCompositeMealToFoods}
               className="primary-btn blue"
               type="button"
+              disabled={savingToFoods}
             >
-              نسخ SQL
+              {savingToFoods ? "جارٍ الإضافة..." : "إضافة إلى قاعدة البيانات"}
+            </button>
+
+            <button
+              onClick={resetForm}
+              className="primary-btn green-btn"
+              type="button"
+            >
+              مسح الحقول
             </button>
           </div>
 
@@ -397,14 +496,18 @@ values
             }}
           >
             <div>
-              <label style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
+              <label
+                style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+              >
                 الوزن النهائي المتحصل عليه بعد النقع/الطبخ (غ)
               </label>
               <input
                 type="number"
                 value={finalYieldG}
                 onChange={(e) =>
-                  setFinalYieldG(e.target.value === "" ? "" : Number(e.target.value))
+                  setFinalYieldG(
+                    e.target.value === "" ? "" : Number(e.target.value)
+                  )
                 }
                 placeholder="مثال: 3250"
                 className="app-input"
@@ -412,7 +515,9 @@ values
             </div>
 
             <div>
-              <label style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
+              <label
+                style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+              >
                 القيم لكل 100غ من الناتج النهائي
               </label>
               <div
@@ -434,7 +539,9 @@ values
           </div>
 
           <div style={{ marginTop: 14 }}>
-            <label style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
+            <label
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
               SQL الناتج
             </label>
             <textarea
