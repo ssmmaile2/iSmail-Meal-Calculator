@@ -383,7 +383,6 @@ export default function Page() {
             })}
           </div>
         </aside>
-
         <section className="content-column">
           <div className="card form-card">
             <div className="meal-actions-row">
@@ -420,16 +419,6 @@ export default function Page() {
               </button>
             </div>
 
-             <div className="bottom-nav-buttons">
-              <button
-                className="primary-btn blue"
-                onClick={() => router.push("/hidden-meals/composite-calculator")}
-                type="button"
-              >
-                حساب الوجبات المركبة
-              </button>
-            </div>
-            
             <div className="search-row">
               <input
                 type="number"
@@ -530,7 +519,7 @@ export default function Page() {
                       </tr>
                     );
                   })}
-                  
+
                   <tr className="totals-row">
                     <td className="totals-label">الإجمالي</td>
                     <td></td>
@@ -545,8 +534,17 @@ export default function Page() {
               </table>
             </div>
           )}
+
+          <div className="bottom-nav-buttons">
+            <button
+              className="primary-btn blue"
+              onClick={() => router.push("/hidden-meals/composite-calculator")}
+              type="button"
+            >
+              حساب الوجبات المركبة
+            </button>
+          </div>
         </section>
       </div>
     </main>
-  );
-}
+
