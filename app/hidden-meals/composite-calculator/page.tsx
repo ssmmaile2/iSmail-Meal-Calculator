@@ -26,7 +26,7 @@ type RecipeItem = {
 export default function CompositeCalculatorPage() {
   const router = useRouter();
 
-  const [mode, setMode] = useState<"recipe" | "manual">("recipe");
+  const [mode, setMode] = useState<"recipe" | "manual" | "manage">("recipe");
 
   const [mealName, setMealName] = useState("");
   const [alias1, setAlias1] = useState("");
@@ -44,6 +44,13 @@ export default function CompositeCalculatorPage() {
   const [manualFat, setManualFat] = useState<number | "">("");
   const [manualCarbs, setManualCarbs] = useState<number | "">("");
   const [manualFiber, setManualFiber] = useState<number | "">("");
+
+  const [foodsAdminQuery, setFoodsAdminQuery] = useState("");
+  const [foodsAdminResults, setFoodsAdminResults] = useState<Food[]>([]);
+  const [foodsAdminLoading, setFoodsAdminLoading] = useState(false);
+  const [editingFoodId, setEditingFoodId] = useState<string | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingFoodId, setDeletingFoodId] = useState<string | null>(null);
 
   const [copyingSql, setCopyingSql] = useState(false);
   const [savingToFoods, setSavingToFoods] = useState(false);
@@ -77,6 +84,36 @@ export default function CompositeCalculatorPage() {
 
     return () => clearTimeout(timer);
   }, [query, mode]);
+
+  useEffect(() => {
+    if (mode !== "manage") return;
+
+    const timer = setTimeout(async () => {
+      try {
+        setFoodsAdminLoading(true);
+
+        const url = foodsAdminQuery.trim()
+          ? `/api/foods?query=${encodeURIComponent(foodsAdminQuery)}`
+          : "/api/foods";
+
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (!res.ok) {
+          console.error("Foods admin search failed:", data);
+          return;
+        }
+
+        setFoodsAdminResults(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Foods admin search error:", error);
+      } finally {
+        setFoodsAdminLoading(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [mode, foodsAdminQuery]);
 
   function addItem(food: Food) {
     const finalQtyValue =
@@ -132,7 +169,7 @@ export default function CompositeCalculatorPage() {
   }, [items]);
 
   const per100 = useMemo(() => {
-    if (mode === "manual") {
+    if (mode === "manual" || mode === "manage") {
       return {
         kcal: manualKcal === "" ? 0 : Number(manualKcal),
         protein: manualProtein === "" ? 0 : Number(manualProtein),
@@ -241,7 +278,7 @@ values
         manualCarbs === "" ||
         manualFiber === ""
       ) {
-        alert("يرجى إدخال جميع القيم الغذائية اليدوية");
+        alert("يرجى إدخال جميع القيم الغذائية");
         return;
       }
     }
@@ -272,7 +309,7 @@ values
 
       let payload;
 
-      if (mode === "manual") {
+      if (mode === "manual" || mode === "manage") {
         if (
           manualKcal === "" ||
           manualProtein === "" ||
@@ -346,6 +383,138 @@ values
     }
   }
 
+  function startEditingFood(food: Food) {
+    setEditingFoodId(food.id);
+    setMealName(food.name_ar || "");
+    setAlias1(food.aliases?.[0] || "");
+    setAlias2(food.aliases?.[1] || "");
+    setNotes(food.notes || "");
+    setManualKcal(food.kcal_100 ?? "");
+    setManualProtein(food.protein_100 ?? "");
+    setManualFat(food.fat_100 ?? "");
+    setManualCarbs(food.carbs_total_100 ?? "");
+    setManualFiber(food.fiber_100 ?? "");
+    setMode("manage");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function saveEditedFood() {
+    if (!editingFoodId) {
+      alert("اختر عنصرًا أولًا");
+      return;
+    }
+
+    if (!mealName.trim()) {
+      alert("يرجى إدخال اسم العنصر");
+      return;
+    }
+
+    if (
+      manualKcal === "" ||
+      manualProtein === "" ||
+      manualFat === "" ||
+      manualCarbs === "" ||
+      manualFiber === ""
+    ) {
+      alert("يرجى إدخال جميع القيم الغذائية");
+      return;
+    }
+
+    setSavingEdit(true);
+
+    try {
+      const payload = {
+        name_ar: mealName.trim(),
+        aliases: [alias1.trim(), alias2.trim()].filter(Boolean),
+        kcal_100: Number(manualKcal),
+        protein_100: Number(manualProtein),
+        fat_100: Number(manualFat),
+        carbs_total_100: Number(manualCarbs),
+        fiber_100: Number(manualFiber),
+        notes: notes.trim(),
+        default_qty_g: 100,
+        is_preset: true,
+      };
+
+      const res = await fetch(`/api/foods/${editingFoodId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("Update food failed:", data);
+        alert(data.error || "فشل في تعديل العنصر");
+        return;
+      }
+
+      alert("تم تعديل العنصر بنجاح");
+
+      const refreshRes = await fetch(
+        foodsAdminQuery.trim()
+          ? `/api/foods?query=${encodeURIComponent(foodsAdminQuery)}`
+          : "/api/foods"
+      );
+      const refreshData = await refreshRes.json();
+
+      if (refreshRes.ok) {
+        setFoodsAdminResults(Array.isArray(refreshData) ? refreshData : []);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("حدث خطأ أثناء التعديل");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function deleteFood(foodId: string) {
+    const confirmed = window.confirm("هل تريد حذف هذا العنصر نهائيًا؟");
+    if (!confirmed) return;
+
+    setDeletingFoodId(foodId);
+
+    try {
+      const res = await fetch(`/api/foods/${foodId}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("Delete food failed:", data);
+        alert(data.error || "فشل في حذف العنصر");
+        return;
+      }
+
+      alert("تم حذف العنصر");
+
+      setFoodsAdminResults((prev) => prev.filter((food) => food.id !== foodId));
+
+      if (editingFoodId === foodId) {
+        setEditingFoodId(null);
+        setMealName("");
+        setAlias1("");
+        setAlias2("");
+        setNotes("");
+        setManualKcal("");
+        setManualProtein("");
+        setManualFat("");
+        setManualCarbs("");
+        setManualFiber("");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("حدث خطأ أثناء الحذف");
+    } finally {
+      setDeletingFoodId(null);
+    }
+  }
+
   function resetForm() {
     setMealName("");
     setAlias1("");
@@ -361,6 +530,9 @@ values
     setManualFat("");
     setManualCarbs("");
     setManualFiber("");
+    setFoodsAdminQuery("");
+    setFoodsAdminResults([]);
+    setEditingFoodId(null);
     setMode("recipe");
   }
 
@@ -411,7 +583,10 @@ values
             </button>
           </div>
 
-          <div className="mode-toggle" style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
+          <div
+            className="mode-toggle"
+            style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}
+          >
             <button
               className={`primary-btn ${mode === "recipe" ? "blue" : ""}`}
               onClick={() => setMode("recipe")}
@@ -426,6 +601,14 @@ values
               type="button"
             >
               إدخال يدوي
+            </button>
+
+            <button
+              className={`primary-btn ${mode === "manage" ? "blue" : ""}`}
+              onClick={() => setMode("manage")}
+              type="button"
+            >
+              إدارة العناصر
             </button>
           </div>
 
@@ -468,7 +651,7 @@ values
             />
           </div>
 
-          {mode === "manual" && (
+          {(mode === "manual" || mode === "manage") && (
             <div
               style={{
                 display: "grid",
@@ -570,6 +753,101 @@ values
                   ))}
                 </div>
               )}
+            </>
+          )}
+
+          {mode === "manage" && (
+            <>
+              <div style={{ marginTop: 14 }}>
+                <div className="meal-actions-row">
+                  <button
+                    onClick={saveEditedFood}
+                    className="primary-btn blue"
+                    type="button"
+                    disabled={!editingFoodId || savingEdit}
+                  >
+                    {savingEdit ? "جارٍ حفظ التعديل..." : "حفظ التعديل"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="card form-card" style={{ marginTop: 16 }}>
+                <div style={{ marginBottom: 12, fontWeight: 700 }}>
+                  ابحث عن عنصر لتعديله أو حذفه
+                </div>
+
+                <input
+                  value={foodsAdminQuery}
+                  onChange={(e) => setFoodsAdminQuery(e.target.value)}
+                  placeholder="ابحث بالاسم..."
+                  className="app-input"
+                />
+
+                <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
+                  {foodsAdminLoading ? (
+                    <div>جاري التحميل...</div>
+                  ) : foodsAdminResults.length === 0 ? (
+                    <div>لا توجد نتائج.</div>
+                  ) : (
+                    foodsAdminResults.map((food) => (
+                      <div
+                        key={food.id}
+                        style={{
+                          border: "1px solid #e5e7eb",
+                          borderRadius: 12,
+                          padding: 12,
+                        }}
+                      >
+                        <div style={{ fontWeight: 700 }}>{food.name_ar}</div>
+
+                        <div style={{ fontSize: 13, color: "#666", marginTop: 6 }}>
+                          aliases: {(food.aliases || []).join(" ، ") || "—"}
+                        </div>
+
+                        <div style={{ marginTop: 8, lineHeight: 1.8 }}>
+                          <div>🔥 {food.kcal_100} Kc</div>
+                          <div>🥩 {food.protein_100} P</div>
+                          <div>🧈 {food.fat_100} F</div>
+                          <div>🌾 {food.carbs_total_100} Carb</div>
+                          <div>🌿 {food.fiber_100} Fiber</div>
+                        </div>
+
+                        {food.notes ? (
+                          <div style={{ marginTop: 8, fontSize: 13, color: "#666" }}>
+                            {food.notes}
+                          </div>
+                        ) : null}
+
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 8,
+                            flexWrap: "wrap",
+                            marginTop: 10,
+                          }}
+                        >
+                          <button
+                            onClick={() => startEditingFood(food)}
+                            className="primary-btn"
+                            type="button"
+                          >
+                            تعديل
+                          </button>
+
+                          <button
+                            onClick={() => deleteFood(food.id)}
+                            className="danger-btn"
+                            type="button"
+                            disabled={deletingFoodId === food.id}
+                          >
+                            {deletingFoodId === food.id ? "جارٍ الحذف..." : "حذف"}
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </>
           )}
         </div>
@@ -703,12 +981,12 @@ values
           </>
         )}
 
-        {mode === "manual" && (
+        {(mode === "manual" || mode === "manage") && (
           <div className="card form-card" style={{ marginTop: 16 }}>
             <label
               style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
             >
-              القيم اليدوية لكل 100غ
+              القيم لكل 100غ
             </label>
             <div
               style={{
