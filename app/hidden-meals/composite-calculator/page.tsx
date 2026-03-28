@@ -52,7 +52,6 @@ export default function CompositeCalculatorPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [deletingFoodId, setDeletingFoodId] = useState<string | null>(null);
 
-  const [copyingSql, setCopyingSql] = useState(false);
   const [savingToFoods, setSavingToFoods] = useState(false);
 
   useEffect(() => {
@@ -214,88 +213,6 @@ export default function CompositeCalculatorPage() {
 
   const netCarbPer100 = per100.carbs_total - per100.fiber;
 
-  const sqlSnippet = useMemo(() => {
-    const safeName = mealName.trim() || "عنصر غذائي جديد";
-
-    const aliases = [alias1.trim(), alias2.trim()]
-      .filter(Boolean)
-      .map((v) => `"${v.replace(/"/g, '\\"')}"`);
-
-    const aliasArray = aliases.length > 0 ? `{${aliases.join(",")}}` : `{}`;
-
-    const safeNotes = notes.trim().replace(/'/g, "''");
-    const safeMealName = safeName.replace(/'/g, "''");
-
-    return `insert into public.foods
-(
-  name_ar,
-  aliases,
-  kcal_100,
-  protein_100,
-  fat_100,
-  carbs_total_100,
-  fiber_100,
-  notes,
-  default_qty_g,
-  is_preset
-)
-values
-(
-  '${safeMealName}',
-  '${aliasArray}',
-  ${per100.kcal.toFixed(2)},
-  ${per100.protein.toFixed(2)},
-  ${per100.fat.toFixed(2)},
-  ${per100.carbs_total.toFixed(2)},
-  ${per100.fiber.toFixed(2)},
-  '${safeNotes}',
-  100,
-  true
-);`;
-  }, [mealName, alias1, alias2, notes, per100]);
-
-  async function copySqlToClipboard() {
-    if (!mealName.trim()) {
-      alert("يرجى إدخال اسم العنصر أولًا");
-      return;
-    }
-
-    if (mode === "recipe") {
-      if (items.length === 0) {
-        alert("يرجى إضافة مكونات الوجبة أولًا");
-        return;
-      }
-
-      if (finalYieldG === "" || Number(finalYieldG) <= 0) {
-        alert("يرجى إدخال الوزن النهائي المتحصل عليه");
-        return;
-      }
-    } else {
-      if (
-        manualKcal === "" ||
-        manualProtein === "" ||
-        manualFat === "" ||
-        manualCarbs === "" ||
-        manualFiber === ""
-      ) {
-        alert("يرجى إدخال جميع القيم الغذائية");
-        return;
-      }
-    }
-
-    setCopyingSql(true);
-
-    try {
-      await navigator.clipboard.writeText(sqlSnippet);
-      alert("تم نسخ SQL إلى الحافظة");
-    } catch (error) {
-      console.error(error);
-      alert("تعذر النسخ إلى الحافظة");
-    } finally {
-      setCopyingSql(false);
-    }
-  }
-
   async function addCompositeMealToFoods() {
     if (!mealName.trim()) {
       alert("يرجى إدخال اسم العنصر");
@@ -309,7 +226,7 @@ values
 
       let payload;
 
-      if (mode === "manual" || mode === "manage") {
+      if (mode === "manual") {
         if (
           manualKcal === "" ||
           manualProtein === "" ||
@@ -538,8 +455,40 @@ values
 
   return (
     <main className="page-shell" dir="rtl">
-      <div className="app-header centered">
-        <h1 className="app-title">حاسبة الوجبات المركبة</h1>
+      <div
+        className="app-header centered"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          onClick={() => router.push("/hidden-meals")}
+          className="primary-btn"
+          type="button"
+        >
+          رجوع
+        </button>
+
+        <h1 className="app-title" style={{ margin: 0 }}>
+          منصة إدارة العناصر
+        </h1>
+
+        <button
+          onClick={resetForm}
+          className="primary-btn"
+          type="button"
+          style={{
+            background: "#f59e0b",
+            borderColor: "#f59e0b",
+            color: "#fff",
+          }}
+        >
+          مسح الحقول
+        </button>
       </div>
 
       <div
@@ -547,42 +496,6 @@ values
         style={{ maxWidth: 1100, margin: "0 auto" }}
       >
         <div className="card form-card">
-          <div className="meal-actions-row">
-            <button
-              onClick={() => router.push("/hidden-meals")}
-              className="primary-btn"
-              type="button"
-            >
-              رجوع
-            </button>
-
-            <button
-              onClick={copySqlToClipboard}
-              className="primary-btn"
-              type="button"
-              disabled={copyingSql}
-            >
-              {copyingSql ? "جارٍ النسخ..." : "نسخ SQL"}
-            </button>
-
-            <button
-              onClick={addCompositeMealToFoods}
-              className="primary-btn blue"
-              type="button"
-              disabled={savingToFoods}
-            >
-              {savingToFoods ? "جارٍ الإضافة..." : "إضافة إلى قاعدة البيانات"}
-            </button>
-
-            <button
-              onClick={resetForm}
-              className="primary-btn green-btn"
-              type="button"
-            >
-              مسح الحقول
-            </button>
-          </div>
-
           <div
             className="mode-toggle"
             style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}
@@ -754,6 +667,21 @@ values
                 </div>
               )}
             </>
+          )}
+
+          {(mode === "recipe" || mode === "manual") && (
+            <div style={{ marginTop: 14 }}>
+              <div className="meal-actions-row">
+                <button
+                  onClick={addCompositeMealToFoods}
+                  className="primary-btn blue"
+                  type="button"
+                  disabled={savingToFoods}
+                >
+                  {savingToFoods ? "جارٍ الإضافة..." : "إضافة إلى قاعدة البيانات"}
+                </button>
+              </div>
+            </div>
           )}
 
           {mode === "manage" && (
@@ -1005,23 +933,6 @@ values
             </div>
           </div>
         )}
-
-        <div className="card form-card" style={{ marginTop: 16 }}>
-          <div style={{ marginTop: 14 }}>
-            <label
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
-              SQL الناتج
-            </label>
-            <textarea
-              value={sqlSnippet}
-              readOnly
-              rows={14}
-              className="app-input"
-              style={{ resize: "vertical", fontFamily: "monospace" }}
-            />
-          </div>
-        </div>
       </div>
     </main>
   );
