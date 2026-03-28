@@ -541,7 +541,7 @@ export default function Page() {
               onClick={() => router.push("/hidden-meals/composite-calculator")}
               type="button"
             >
-              حساب الوجبات المركبة
+              منصة إدارة العناصر
             </button>
           </div>
         </section>
