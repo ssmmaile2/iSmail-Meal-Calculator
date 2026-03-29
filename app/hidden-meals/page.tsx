@@ -458,29 +458,29 @@ export default function Page() {
           {loading ? (
             <div className="card loading-card">جاري التحميل...</div>
           ) : (
-            <div className="desktop-table-wrap card compact-table-card">
-              <table className="meal-table compact-meal-table">
+            <div className="desktop-table-wrap card ultra-compact-table-card">
+              <table className="meal-table ultra-compact-meal-table">
                 <colgroup>
-                  <col style={{ width: "24%" }} />
-                  <col style={{ width: "16%" }} />
-                  <col style={{ width: "10%" }} />
-                  <col style={{ width: "10%" }} />
-                  <col style={{ width: "10%" }} />
-                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "26%" }} />
+                  <col style={{ width: "14%" }} />
+                  <col style={{ width: "9%" }} />
+                  <col style={{ width: "9%" }} />
+                  <col style={{ width: "9%" }} />
+                  <col style={{ width: "9%" }} />
                   <col style={{ width: "12%" }} />
-                  <col style={{ width: "8%" }} />
+                  <col style={{ width: "12%" }} />
                 </colgroup>
 
                 <thead>
                   <tr>
-                    <th>المكوّن</th>
-                    <th>الكمية (غ)</th>
-                    <th>Kc</th>
-                    <th>P</th>
-                    <th>F</th>
-                    <th>G</th>
-                    <th>Crb</th>
-                    <th>حذف</th>
+                    <th className="head-food">المكوّن</th>
+                    <th className="head-qty col-sep">الكمية (غ)</th>
+                    <th className="head-metric col-sep">Kc</th>
+                    <th className="head-metric col-sep">P</th>
+                    <th className="head-metric col-sep">F</th>
+                    <th className="head-metric col-sep">G</th>
+                    <th className="head-metric col-sep">Crb</th>
+                    <th className="head-delete col-sep">حذف</th>
                   </tr>
                 </thead>
 
@@ -501,7 +501,7 @@ export default function Page() {
                           </div>
                         </td>
 
-                        <td className="qty-cell cell-divider">
+                        <td className="qty-cell col-sep">
                           <input
                             type="number"
                             value={item.qty_g}
@@ -512,37 +512,37 @@ export default function Page() {
                           />
                         </td>
 
-                        <td className="metric-cell cell-divider">
-                          <span className="metric-value">
+                        <td className="metric-cell col-sep">
+                          <span className="metric-box">
                             {Math.round(row.kcal)}
                           </span>
                         </td>
 
-                        <td className="metric-cell cell-divider">
-                          <span className="metric-value">
+                        <td className="metric-cell col-sep">
+                          <span className="metric-box">
                             {Math.round(row.protein)}
                           </span>
                         </td>
 
-                        <td className="metric-cell cell-divider">
-                          <span className="metric-value">
+                        <td className="metric-cell col-sep">
+                          <span className="metric-box">
                             {Math.round(row.fiber)}
                           </span>
                         </td>
 
-                        <td className="metric-cell cell-divider">
-                          <span className="metric-value">
+                        <td className="metric-cell col-sep">
+                          <span className="metric-box">
                             {Math.round(row.fat)}
                           </span>
                         </td>
 
-                        <td className="metric-cell cell-divider">
-                          <span className="metric-value">
+                        <td className="metric-cell col-sep">
+                          <span className="metric-box">
                             {Math.round(row.netCarb)}
                           </span>
                         </td>
 
-                        <td className="delete-cell cell-divider">
+                        <td className="delete-cell col-sep">
                           <button
                             onClick={() => deleteItem(item.id)}
                             className="danger-btn small"
@@ -557,39 +557,39 @@ export default function Page() {
 
                   <tr className="totals-row">
                     <td className="totals-label">الإجمالي</td>
-                    <td className="qty-cell cell-divider"></td>
+                    <td className="qty-cell col-sep"></td>
 
-                    <td className="metric-cell cell-divider">
-                      <span className="metric-value">
+                    <td className="metric-cell col-sep">
+                      <span className="metric-box">
                         {Math.round(totals.kcal)}
                       </span>
                     </td>
 
-                    <td className="metric-cell cell-divider">
-                      <span className="metric-value">
+                    <td className="metric-cell col-sep">
+                      <span className="metric-box">
                         {Math.round(totals.protein)}
                       </span>
                     </td>
 
-                    <td className="metric-cell cell-divider">
-                      <span className="metric-value">
+                    <td className="metric-cell col-sep">
+                      <span className="metric-box">
                         {Math.round(totals.fiber)}
                       </span>
                     </td>
 
-                    <td className="metric-cell cell-divider">
-                      <span className="metric-value">
+                    <td className="metric-cell col-sep">
+                      <span className="metric-box">
                         {Math.round(totals.fat)}
                       </span>
                     </td>
 
-                    <td className="metric-cell cell-divider">
-                      <span className="metric-value">
+                    <td className="metric-cell col-sep">
+                      <span className="metric-box">
                         {Math.round(totals.netCarb)}
                       </span>
                     </td>
 
-                    <td className="delete-cell cell-divider"></td>
+                    <td className="delete-cell col-sep"></td>
                   </tr>
                 </tbody>
               </table>
@@ -635,21 +635,22 @@ export default function Page() {
       </div>
 
       <style jsx>{`
-        .compact-table-card {
-          padding: 10px 12px;
+        .ultra-compact-table-card {
+          padding: 8px 10px;
           overflow-x: auto;
         }
 
-        .compact-meal-table {
+        .ultra-compact-meal-table {
           width: 100%;
-          min-width: 760px;
+          min-width: 720px;
           table-layout: fixed;
-          border-collapse: collapse;
+          border-collapse: separate;
+          border-spacing: 0;
         }
 
-        .compact-meal-table thead th {
-          padding: 10px 8px;
-          font-size: 0.95rem;
+        .ultra-compact-meal-table thead th {
+          padding: 8px 6px;
+          font-size: 0.88rem;
           font-weight: 700;
           color: #6b7280;
           text-align: center;
@@ -657,10 +658,14 @@ export default function Page() {
           border-bottom: 1px solid rgba(15, 23, 42, 0.08);
         }
 
-        .compact-meal-table tbody td {
-          padding: 8px 8px;
+        .ultra-compact-meal-table tbody td {
+          padding: 6px 5px;
           vertical-align: middle;
-          border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+          border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+        }
+
+        .col-sep {
+          border-inline-start: 1px solid rgba(15, 23, 42, 0.08);
         }
 
         .food-cell {
@@ -674,44 +679,48 @@ export default function Page() {
           white-space: nowrap;
         }
 
-        .cell-divider {
-          border-inline-start: 1px solid rgba(15, 23, 42, 0.08);
-        }
-
-        .metric-value {
-          display: inline-block;
-          min-width: 58px;
-          text-align: center;
+        .metric-box {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 52px;
+          max-width: 100%;
+          padding: 0 2px;
           font-variant-numeric: tabular-nums;
+          font-feature-settings: "tnum";
           white-space: nowrap;
+          text-align: center;
+          line-height: 1.1;
         }
 
         .qty-input {
           width: 100%;
-          max-width: 88px;
-          min-width: 70px;
+          max-width: 74px;
+          min-width: 60px;
           text-align: center;
           margin: 0 auto;
           display: block;
+          padding: 4px 6px;
         }
 
         .table-food-title {
           font-weight: 700;
-          line-height: 1.2;
-          margin-bottom: 2px;
+          line-height: 1.12;
+          margin-bottom: 1px;
           word-break: break-word;
+          font-size: 0.96rem;
         }
 
         .table-food-note {
-          font-size: 0.8rem;
-          line-height: 1.2;
+          font-size: 0.74rem;
+          line-height: 1.12;
           color: #6b7280;
           word-break: break-word;
         }
 
         .totals-row td {
           font-weight: 800;
-          background: rgba(15, 23, 42, 0.025);
+          background: rgba(15, 23, 42, 0.022);
         }
 
         .totals-label {
@@ -720,37 +729,46 @@ export default function Page() {
         }
 
         @media (max-width: 1024px) {
-          .compact-meal-table {
-            min-width: 720px;
-          }
-
-          .compact-meal-table thead th {
-            padding: 9px 6px;
-            font-size: 0.9rem;
-          }
-
-          .compact-meal-table tbody td {
-            padding: 7px 6px;
-          }
-
-          .metric-value {
-            min-width: 52px;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .compact-meal-table {
+          .ultra-compact-meal-table {
             min-width: 680px;
           }
 
-          .metric-value {
-            min-width: 48px;
+          .ultra-compact-meal-table thead th {
+            padding: 7px 5px;
+            font-size: 0.84rem;
+          }
+
+          .ultra-compact-meal-table tbody td {
+            padding: 5px 4px;
+          }
+
+          .metric-box {
+            min-width: 46px;
             font-size: 0.95rem;
           }
 
           .qty-input {
-            max-width: 76px;
-            min-width: 64px;
+            max-width: 68px;
+            min-width: 56px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .ultra-compact-meal-table {
+            min-width: 640px;
+          }
+
+          .metric-box {
+            min-width: 42px;
+            font-size: 0.9rem;
+          }
+
+          .table-food-title {
+            font-size: 0.9rem;
+          }
+
+          .table-food-note {
+            font-size: 0.7rem;
           }
         }
       `}</style>
