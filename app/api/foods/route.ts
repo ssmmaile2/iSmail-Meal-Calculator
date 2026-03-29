@@ -21,10 +21,34 @@ export async function GET(req: Request) {
       is_preset
     `)
     .order("name_ar", { ascending: true })
-    .limit(20);
+    .limit(50);
 
   if (q) {
-    query = query.ilike("name_ar", `%${q}%`);
+    const { data, error } = await query;
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    const normalizedQ = q.toLowerCase();
+
+    const filtered = (data ?? []).filter((food) => {
+      const nameMatch =
+        typeof food.name_ar === "string" &&
+        food.name_ar.toLowerCase().includes(normalizedQ);
+
+      const aliasMatch =
+        Array.isArray(food.aliases) &&
+        food.aliases.some(
+          (alias) =>
+            typeof alias === "string" &&
+            alias.toLowerCase().includes(normalizedQ)
+        );
+
+      return nameMatch || aliasMatch;
+    });
+
+    return NextResponse.json(filtered);
   }
 
   const { data, error } = await query;
