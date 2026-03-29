@@ -327,7 +327,27 @@ export default function Page() {
   return (
     <main className="page-shell" dir="rtl">
       <div className="app-header centered">
-        <h1 className="app-title">Meal Calculator</h1>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            width: "100%",
+          }}
+        >
+          <h1 className="app-title" style={{ margin: 0 }}>
+            Meal Calculator
+          </h1>
+
+          <button
+            onClick={() => router.push("/")}
+            className="primary-btn"
+            type="button"
+          >
+            الصفحة الرئيسية
+          </button>
+        </div>
       </div>
 
       <div className="app-layout">
@@ -383,42 +403,9 @@ export default function Page() {
             })}
           </div>
         </aside>
+
         <section className="content-column">
           <div className="card form-card">
-            <div className="meal-actions-row">
-              <button
-                onClick={createNewMeal}
-                className="primary-btn green-btn"
-                type="button"
-              >
-                وجبة جديدة
-              </button>
-
-              <input
-                value={mealTitle}
-                onChange={(e) => setMealTitle(e.target.value)}
-                placeholder="اسم الوجبة"
-                className="app-input"
-              />
-
-              <button
-                onClick={saveMealTitle}
-                disabled={savingTitle}
-                className="primary-btn blue"
-                type="button"
-              >
-                {savingTitle ? "جاري الحفظ..." : "حفظ"}
-              </button>
-
-              <button
-                onClick={() => router.push("/")}
-                className="primary-btn"
-                type="button"
-              >
-                الصفحة الرئيسية
-              </button>
-            </div>
-
             <div className="search-row">
               <input
                 type="number"
@@ -534,6 +521,32 @@ export default function Page() {
               </table>
             </div>
           )}
+
+          <div className="meal-actions-row">
+            <button
+              onClick={createNewMeal}
+              className="primary-btn green-btn"
+              type="button"
+            >
+              وجبة جديدة
+            </button>
+
+            <input
+              value={mealTitle}
+              onChange={(e) => setMealTitle(e.target.value)}
+              placeholder="اسم الوجبة"
+              className="app-input"
+            />
+
+            <button
+              onClick={saveMealTitle}
+              disabled={savingTitle}
+              className="primary-btn blue"
+              type="button"
+            >
+              {savingTitle ? "جاري الحفظ..." : "حفظ"}
+            </button>
+          </div>
 
           <div className="bottom-nav-buttons">
             <button
