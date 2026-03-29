@@ -101,7 +101,9 @@ export default function Page() {
       }
 
       const filtered = Array.isArray(data)
-        ? data.filter((meal) => Array.isArray(meal.items) && meal.items.length > 0)
+        ? data.filter(
+            (meal) => Array.isArray(meal.items) && meal.items.length > 0
+          )
         : [];
 
       setSavedMeals(filtered);
@@ -162,7 +164,9 @@ export default function Page() {
       if (wasCurrentMeal) {
         createNewMeal();
       } else {
-        setSavedMeals((prev) => prev.filter((meal) => meal.id !== targetMealId));
+        setSavedMeals((prev) =>
+          prev.filter((meal) => meal.id !== targetMealId)
+        );
       }
     } catch (error) {
       console.error(error);
@@ -286,8 +290,8 @@ export default function Page() {
       food.default_qty_g && Number(food.default_qty_g) > 0
         ? Number(food.default_qty_g)
         : qty === "" || Number(qty) <= 0
-          ? 100
-          : Number(qty);
+        ? 100
+        : Number(qty);
 
     setAdding(true);
 
@@ -373,7 +377,9 @@ export default function Page() {
               return (
                 <div
                   key={meal.id}
-                  className={`saved-meal-card ${meal.id === mealId ? "active" : ""}`}
+                  className={`saved-meal-card ${
+                    meal.id === mealId ? "active" : ""
+                  }`}
                 >
                   <button
                     onClick={() => refreshMeal(meal.id)}
@@ -395,6 +401,7 @@ export default function Page() {
                   <button
                     onClick={() => deleteMeal(meal.id)}
                     className="danger-btn"
+                    type="button"
                   >
                     حذف الوجبة
                   </button>
@@ -451,8 +458,19 @@ export default function Page() {
           {loading ? (
             <div className="card loading-card">جاري التحميل...</div>
           ) : (
-            <div className="desktop-table-wrap card">
-              <table className="meal-table">
+            <div className="desktop-table-wrap card compact-table-card">
+              <table className="meal-table compact-meal-table">
+                <colgroup>
+                  <col style={{ width: "24%" }} />
+                  <col style={{ width: "16%" }} />
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "8%" }} />
+                </colgroup>
+
                 <thead>
                   <tr>
                     <th>المكوّن</th>
@@ -465,6 +483,7 @@ export default function Page() {
                     <th>حذف</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {items.map((item) => {
                     if (!item.foods) return null;
@@ -473,13 +492,16 @@ export default function Page() {
 
                     return (
                       <tr key={item.id}>
-                        <td>
-                          <div className="table-food-title">{item.foods.name_ar}</div>
+                        <td className="food-cell">
+                          <div className="table-food-title">
+                            {item.foods.name_ar}
+                          </div>
                           <div className="table-food-note">
                             {item.foods.notes || ""}
                           </div>
                         </td>
-                        <td>
+
+                        <td className="qty-cell cell-divider">
                           <input
                             type="number"
                             value={item.qty_g}
@@ -489,12 +511,38 @@ export default function Page() {
                             className="qty-input"
                           />
                         </td>
-                        <td>{Math.round(row.kcal)}</td>
-                        <td>{Math.round(row.protein)}</td>
-                        <td>{Math.round(row.fiber)}</td>
-                        <td>{Math.round(row.fat)}</td>
-                        <td>{Math.round(row.netCarb)}</td>
-                        <td>
+
+                        <td className="metric-cell cell-divider">
+                          <span className="metric-value">
+                            {Math.round(row.kcal)}
+                          </span>
+                        </td>
+
+                        <td className="metric-cell cell-divider">
+                          <span className="metric-value">
+                            {Math.round(row.protein)}
+                          </span>
+                        </td>
+
+                        <td className="metric-cell cell-divider">
+                          <span className="metric-value">
+                            {Math.round(row.fiber)}
+                          </span>
+                        </td>
+
+                        <td className="metric-cell cell-divider">
+                          <span className="metric-value">
+                            {Math.round(row.fat)}
+                          </span>
+                        </td>
+
+                        <td className="metric-cell cell-divider">
+                          <span className="metric-value">
+                            {Math.round(row.netCarb)}
+                          </span>
+                        </td>
+
+                        <td className="delete-cell cell-divider">
                           <button
                             onClick={() => deleteItem(item.id)}
                             className="danger-btn small"
@@ -509,13 +557,39 @@ export default function Page() {
 
                   <tr className="totals-row">
                     <td className="totals-label">الإجمالي</td>
-                    <td></td>
-                    <td>{Math.round(totals.kcal)}</td>
-                    <td>{Math.round(totals.protein)} P</td>
-                    <td>{Math.round(totals.fiber)}</td>
-                    <td>{Math.round(totals.fat)}</td>
-                    <td>{Math.round(totals.netCarb)} Crb</td>
-                    <td></td>
+                    <td className="qty-cell cell-divider"></td>
+
+                    <td className="metric-cell cell-divider">
+                      <span className="metric-value">
+                        {Math.round(totals.kcal)}
+                      </span>
+                    </td>
+
+                    <td className="metric-cell cell-divider">
+                      <span className="metric-value">
+                        {Math.round(totals.protein)}
+                      </span>
+                    </td>
+
+                    <td className="metric-cell cell-divider">
+                      <span className="metric-value">
+                        {Math.round(totals.fiber)}
+                      </span>
+                    </td>
+
+                    <td className="metric-cell cell-divider">
+                      <span className="metric-value">
+                        {Math.round(totals.fat)}
+                      </span>
+                    </td>
+
+                    <td className="metric-cell cell-divider">
+                      <span className="metric-value">
+                        {Math.round(totals.netCarb)}
+                      </span>
+                    </td>
+
+                    <td className="delete-cell cell-divider"></td>
                   </tr>
                 </tbody>
               </table>
@@ -559,6 +633,127 @@ export default function Page() {
           </div>
         </section>
       </div>
+
+      <style jsx>{`
+        .compact-table-card {
+          padding: 10px 12px;
+          overflow-x: auto;
+        }
+
+        .compact-meal-table {
+          width: 100%;
+          min-width: 760px;
+          table-layout: fixed;
+          border-collapse: collapse;
+        }
+
+        .compact-meal-table thead th {
+          padding: 10px 8px;
+          font-size: 0.95rem;
+          font-weight: 700;
+          color: #6b7280;
+          text-align: center;
+          white-space: nowrap;
+          border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+        }
+
+        .compact-meal-table tbody td {
+          padding: 8px 8px;
+          vertical-align: middle;
+          border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+        }
+
+        .food-cell {
+          text-align: right;
+        }
+
+        .qty-cell,
+        .metric-cell,
+        .delete-cell {
+          text-align: center;
+          white-space: nowrap;
+        }
+
+        .cell-divider {
+          border-inline-start: 1px solid rgba(15, 23, 42, 0.08);
+        }
+
+        .metric-value {
+          display: inline-block;
+          min-width: 58px;
+          text-align: center;
+          font-variant-numeric: tabular-nums;
+          white-space: nowrap;
+        }
+
+        .qty-input {
+          width: 100%;
+          max-width: 88px;
+          min-width: 70px;
+          text-align: center;
+          margin: 0 auto;
+          display: block;
+        }
+
+        .table-food-title {
+          font-weight: 700;
+          line-height: 1.2;
+          margin-bottom: 2px;
+          word-break: break-word;
+        }
+
+        .table-food-note {
+          font-size: 0.8rem;
+          line-height: 1.2;
+          color: #6b7280;
+          word-break: break-word;
+        }
+
+        .totals-row td {
+          font-weight: 800;
+          background: rgba(15, 23, 42, 0.025);
+        }
+
+        .totals-label {
+          text-align: right;
+          white-space: nowrap;
+        }
+
+        @media (max-width: 1024px) {
+          .compact-meal-table {
+            min-width: 720px;
+          }
+
+          .compact-meal-table thead th {
+            padding: 9px 6px;
+            font-size: 0.9rem;
+          }
+
+          .compact-meal-table tbody td {
+            padding: 7px 6px;
+          }
+
+          .metric-value {
+            min-width: 52px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .compact-meal-table {
+            min-width: 680px;
+          }
+
+          .metric-value {
+            min-width: 48px;
+            font-size: 0.95rem;
+          }
+
+          .qty-input {
+            max-width: 76px;
+            min-width: 64px;
+          }
+        }
+      `}</style>
     </main>
   );
 }
