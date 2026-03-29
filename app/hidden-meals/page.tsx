@@ -458,29 +458,29 @@ export default function Page() {
           {loading ? (
             <div className="card loading-card">جاري التحميل...</div>
           ) : (
-            <div className="desktop-table-wrap card ultra-compact-table-card">
-              <table className="meal-table ultra-compact-meal-table">
+            <div className="desktop-table-wrap card final-compact-card">
+              <table className="final-compact-table">
                 <colgroup>
-                  <col style={{ width: "26%" }} />
+                  <col style={{ width: "28%" }} />
                   <col style={{ width: "14%" }} />
                   <col style={{ width: "9%" }} />
                   <col style={{ width: "9%" }} />
                   <col style={{ width: "9%" }} />
                   <col style={{ width: "9%" }} />
                   <col style={{ width: "12%" }} />
-                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "10%" }} />
                 </colgroup>
 
                 <thead>
                   <tr>
-                    <th className="head-food">المكوّن</th>
-                    <th className="head-qty col-sep">الكمية (غ)</th>
-                    <th className="head-metric col-sep">Kc</th>
-                    <th className="head-metric col-sep">P</th>
-                    <th className="head-metric col-sep">F</th>
-                    <th className="head-metric col-sep">G</th>
-                    <th className="head-metric col-sep">Crb</th>
-                    <th className="head-delete col-sep">حذف</th>
+                    <th className="food-header">المكوّن</th>
+                    <th className="qty-header sep">الكمية (غ)</th>
+                    <th className="metric-header sep">Kc</th>
+                    <th className="metric-header sep">P</th>
+                    <th className="metric-header sep">F</th>
+                    <th className="metric-header sep">G</th>
+                    <th className="metric-header sep">Crb</th>
+                    <th className="delete-header sep">حذف</th>
                   </tr>
                 </thead>
 
@@ -492,7 +492,7 @@ export default function Page() {
 
                     return (
                       <tr key={item.id}>
-                        <td className="food-cell">
+                        <td className="food-col">
                           <div className="table-food-title">
                             {item.foods.name_ar}
                           </div>
@@ -501,7 +501,7 @@ export default function Page() {
                           </div>
                         </td>
 
-                        <td className="qty-cell col-sep">
+                        <td className="qty-col sep">
                           <input
                             type="number"
                             value={item.qty_g}
@@ -512,40 +512,40 @@ export default function Page() {
                           />
                         </td>
 
-                        <td className="metric-cell col-sep">
-                          <span className="metric-box">
+                        <td className="metric-col sep">
+                          <span className="value-box">
                             {Math.round(row.kcal)}
                           </span>
                         </td>
 
-                        <td className="metric-cell col-sep">
-                          <span className="metric-box">
+                        <td className="metric-col sep">
+                          <span className="value-box">
                             {Math.round(row.protein)}
                           </span>
                         </td>
 
-                        <td className="metric-cell col-sep">
-                          <span className="metric-box">
+                        <td className="metric-col sep">
+                          <span className="value-box">
                             {Math.round(row.fiber)}
                           </span>
                         </td>
 
-                        <td className="metric-cell col-sep">
-                          <span className="metric-box">
+                        <td className="metric-col sep">
+                          <span className="value-box">
                             {Math.round(row.fat)}
                           </span>
                         </td>
 
-                        <td className="metric-cell col-sep">
-                          <span className="metric-box">
+                        <td className="metric-col sep">
+                          <span className="value-box">
                             {Math.round(row.netCarb)}
                           </span>
                         </td>
 
-                        <td className="delete-cell col-sep">
+                        <td className="delete-col sep">
                           <button
                             onClick={() => deleteItem(item.id)}
-                            className="danger-btn small"
+                            className="danger-btn compact-danger-btn"
                             type="button"
                           >
                             حذف
@@ -557,39 +557,39 @@ export default function Page() {
 
                   <tr className="totals-row">
                     <td className="totals-label">الإجمالي</td>
-                    <td className="qty-cell col-sep"></td>
+                    <td className="qty-col sep"></td>
 
-                    <td className="metric-cell col-sep">
-                      <span className="metric-box">
+                    <td className="metric-col sep">
+                      <span className="value-box strong">
                         {Math.round(totals.kcal)}
                       </span>
                     </td>
 
-                    <td className="metric-cell col-sep">
-                      <span className="metric-box">
+                    <td className="metric-col sep">
+                      <span className="value-box strong">
                         {Math.round(totals.protein)}
                       </span>
                     </td>
 
-                    <td className="metric-cell col-sep">
-                      <span className="metric-box">
+                    <td className="metric-col sep">
+                      <span className="value-box strong">
                         {Math.round(totals.fiber)}
                       </span>
                     </td>
 
-                    <td className="metric-cell col-sep">
-                      <span className="metric-box">
+                    <td className="metric-col sep">
+                      <span className="value-box strong">
                         {Math.round(totals.fat)}
                       </span>
                     </td>
 
-                    <td className="metric-cell col-sep">
-                      <span className="metric-box">
+                    <td className="metric-col sep">
+                      <span className="value-box strong">
                         {Math.round(totals.netCarb)}
                       </span>
                     </td>
 
-                    <td className="delete-cell col-sep"></td>
+                    <td className="delete-col sep"></td>
                   </tr>
                 </tbody>
               </table>
@@ -635,12 +635,12 @@ export default function Page() {
       </div>
 
       <style jsx>{`
-        .ultra-compact-table-card {
+        .final-compact-card {
           padding: 8px 10px;
           overflow-x: auto;
         }
 
-        .ultra-compact-meal-table {
+        .final-compact-table {
           width: 100%;
           min-width: 720px;
           table-layout: fixed;
@@ -648,127 +648,144 @@ export default function Page() {
           border-spacing: 0;
         }
 
-        .ultra-compact-meal-table thead th {
-          padding: 8px 6px;
-          font-size: 0.88rem;
-          font-weight: 700;
+        .final-compact-table thead th {
+          padding: 8px 5px;
+          font-size: 0.86rem;
+          font-weight: 800;
           color: #6b7280;
           text-align: center;
           white-space: nowrap;
           border-bottom: 1px solid rgba(15, 23, 42, 0.08);
         }
 
-        .ultra-compact-meal-table tbody td {
-          padding: 6px 5px;
+        .final-compact-table tbody td {
+          padding: 5px 4px;
           vertical-align: middle;
           border-bottom: 1px solid rgba(15, 23, 42, 0.06);
         }
 
-        .col-sep {
+        .sep {
           border-inline-start: 1px solid rgba(15, 23, 42, 0.08);
         }
 
-        .food-cell {
+        .food-col {
           text-align: right;
         }
 
-        .qty-cell,
-        .metric-cell,
-        .delete-cell {
+        .qty-col,
+        .metric-col,
+        .delete-col {
           text-align: center;
           white-space: nowrap;
         }
 
-        .metric-box {
+        .value-box {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          min-width: 52px;
-          max-width: 100%;
+          min-width: 48px;
           padding: 0 2px;
+          text-align: center;
+          white-space: nowrap;
           font-variant-numeric: tabular-nums;
           font-feature-settings: "tnum";
-          white-space: nowrap;
-          text-align: center;
-          line-height: 1.1;
+          line-height: 1;
+          font-size: 0.98rem;
+        }
+
+        .value-box.strong {
+          font-weight: 800;
         }
 
         .qty-input {
           width: 100%;
-          max-width: 74px;
-          min-width: 60px;
+          max-width: 68px;
+          min-width: 56px;
           text-align: center;
           margin: 0 auto;
           display: block;
-          padding: 4px 6px;
+          padding: 3px 5px;
+          font-size: 0.92rem;
+        }
+
+        .compact-danger-btn {
+          padding: 5px 8px !important;
+          min-width: 54px;
+          font-size: 0.84rem;
         }
 
         .table-food-title {
           font-weight: 700;
-          line-height: 1.12;
+          line-height: 1.08;
           margin-bottom: 1px;
           word-break: break-word;
-          font-size: 0.96rem;
+          font-size: 0.94rem;
         }
 
         .table-food-note {
-          font-size: 0.74rem;
-          line-height: 1.12;
+          font-size: 0.72rem;
+          line-height: 1.08;
           color: #6b7280;
           word-break: break-word;
         }
 
         .totals-row td {
           font-weight: 800;
-          background: rgba(15, 23, 42, 0.022);
+          background: rgba(15, 23, 42, 0.02);
         }
 
         .totals-label {
           text-align: right;
           white-space: nowrap;
+          font-weight: 800;
         }
 
         @media (max-width: 1024px) {
-          .ultra-compact-meal-table {
+          .final-compact-table {
             min-width: 680px;
           }
 
-          .ultra-compact-meal-table thead th {
-            padding: 7px 5px;
-            font-size: 0.84rem;
+          .final-compact-table thead th {
+            padding: 7px 4px;
+            font-size: 0.82rem;
           }
 
-          .ultra-compact-meal-table tbody td {
-            padding: 5px 4px;
+          .final-compact-table tbody td {
+            padding: 4px 3px;
           }
 
-          .metric-box {
-            min-width: 46px;
-            font-size: 0.95rem;
+          .value-box {
+            min-width: 42px;
+            font-size: 0.92rem;
           }
 
           .qty-input {
-            max-width: 68px;
-            min-width: 56px;
+            max-width: 62px;
+            min-width: 52px;
+          }
+
+          .compact-danger-btn {
+            min-width: 50px;
+            font-size: 0.8rem;
           }
         }
 
         @media (max-width: 768px) {
-          .ultra-compact-meal-table {
+          .final-compact-table {
             min-width: 640px;
           }
 
-          .metric-box {
-            min-width: 42px;
-            font-size: 0.9rem;
+          .value-box {
+            min-width: 38px;
+            font-size: 0.88rem;
           }
 
           .table-food-title {
-            font-size: 0.9rem;
+            font-size: 0.88rem;
           }
 
           .table-food-note {
-            font-size: 0.7rem;
+            font-size: 0.68rem;
           }
         }
       `}</style>
